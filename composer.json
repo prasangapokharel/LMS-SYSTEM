@@ -1,0 +1,17 @@
+{
+  "name": "prasanga/core-php-app",
+  "description": "A Core PHP app using Symfony Cache, Guzzle, Bootstrap",
+  "type": "project",
+  "require": {
+    "symfony/cache": "^6.0",
+    "guzzlehttp/guzzle": "^7.0",
+    "twbs/bootstrap": "^5.3"
+  },
+  "autoload": {
+    "psr-4": {
+      "App\\": "app/"
+    }
+  },
+  "minimum-stability": "stable",
+  "prefer-stable": true
+}
