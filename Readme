@@ -4,3 +4,8 @@ Password: teacher393
 
 student004
 reset8796
+
+
+composer install 
+
+php start.php 
