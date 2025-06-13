@@ -7,16 +7,9 @@ requireRole('principal');
 $user = getCurrentUser($pdo);
 $msg = "";
 
-// Get leave application ID
-$leave_id = $_GET['id'] ?? 0;
-
-if (!$leave_id) {
-    header('Location: leave_management.php');
-    exit;
-}
-
 // Handle leave approval/rejection
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action'])) {
+    $leave_id = (int)$_POST['leave_id'];
     $action = $_POST['action'];
     $remarks = $_POST['remarks'] ?? '';
     
@@ -24,86 +17,124 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action'])) {
         if ($action == 'approve') {
             $stmt = $pdo->prepare("UPDATE leave_applications 
                                   SET status = 'approved', approved_by = ?, approved_date = NOW(), rejection_reason = ?
-                                  WHERE id = ? AND status = 'pending'");
+                                  WHERE id = ?");
             $stmt->execute([$user['id'], $remarks, $leave_id]);
+            $msg = "<div class='alert alert-success alert-modern'>
+                    <div class='alert-icon'>✓</div>
+                    <div><strong>Leave application approved successfully!</strong></div>
+                   </div>";
+                   
+            // Get user email for notification
+            $stmt = $pdo->prepare("SELECT u.email FROM leave_applications la 
+                                  JOIN users u ON la.user_id = u.id 
+                                  WHERE la.id = ?");
+            $stmt->execute([$leave_id]);
+            $user_email = $stmt->fetchColumn();
             
-            if ($stmt->rowCount() > 0) {
-                $msg = "<div class='alert alert-success alert-modern'>
-                        <div class='alert-icon'>✅</div>
-                        <div><strong>Leave application approved successfully!</strong></div>
-                       </div>";
-                logActivity($pdo, 'leave_approved', 'leave_applications', $leave_id);
-            } else {
-                $msg = "<div class='alert alert-warning alert-modern'>
-                        <div class='alert-icon'>⚠️</div>
-                        <div><strong>Leave application could not be approved. It may have already been processed.</strong></div>
-                       </div>";
-            }
+            // Log the activity
+            logActivity($pdo, 'leave_approve', 'leave_applications', $leave_id);
+            
         } elseif ($action == 'reject') {
-            if (empty($remarks)) {
-                $msg = "<div class='alert alert-danger alert-modern'>
-                        <div class='alert-icon'>❌</div>
-                        <div><strong>Rejection reason is required!</strong></div>
-                       </div>";
-            } else {
-                $stmt = $pdo->prepare("UPDATE leave_applications 
-                                      SET status = 'rejected', approved_by = ?, approved_date = NOW(), rejection_reason = ?
-                                      WHERE id = ? AND status = 'pending'");
-                $stmt->execute([$user['id'], $remarks, $leave_id]);
-                
-                if ($stmt->rowCount() > 0) {
-                    $msg = "<div class='alert alert-success alert-modern'>
-                            <div class='alert-icon'>✅</div>
-                            <div><strong>Leave application rejected successfully!</strong></div>
-                           </div>";
-                    logActivity($pdo, 'leave_rejected', 'leave_applications', $leave_id);
-                } else {
-                    $msg = "<div class='alert alert-warning alert-modern'>
-                            <div class='alert-icon'>⚠️</div>
-                            <div><strong>Leave application could not be rejected. It may have already been processed.</strong></div>
-                           </div>";
-                }
-            }
+            $stmt = $pdo->prepare("UPDATE leave_applications 
+                                  SET status = 'rejected', approved_by = ?, approved_date = NOW(), rejection_reason = ?
+                                  WHERE id = ?");
+            $stmt->execute([$user['id'], $remarks, $leave_id]);
+            $msg = "<div class='alert alert-success alert-modern'>
+                    <div class='alert-icon'>✓</div>
+                    <div><strong>Leave application rejected successfully!</strong></div>
+                   </div>";
+                   
+            // Get user email for notification
+            $stmt = $pdo->prepare("SELECT u.email FROM leave_applications la 
+                                  JOIN users u ON la.user_id = u.id 
+                                  WHERE la.id = ?");
+            $stmt->execute([$leave_id]);
+            $user_email = $stmt->fetchColumn();
+            
+            // Log the activity
+            logActivity($pdo, 'leave_reject', 'leave_applications', $leave_id);
         }
-    } catch (PDOException $e) {
+    } catch (Exception $e) {
         $msg = "<div class='alert alert-danger alert-modern'>
-                <div class='alert-icon'>❌</div>
-                <div><strong>Error processing request. Please try again.</strong></div>
+                <div class='alert-icon'>✗</div>
+                <div><strong>Error: " . htmlspecialchars($e->getMessage()) . "</strong></div>
                </div>";
     }
 }
 
-// Fetch leave application details
-$stmt = $pdo->prepare("SELECT la.*, u.first_name, u.last_name, u.email, u.phone,
-                      CASE 
-                          WHEN la.user_type = 'student' THEN (SELECT student_id FROM students WHERE user_id = la.user_id)
-                          ELSE 'N/A'
-                      END as identifier,
-                      CASE 
-                          WHEN la.user_type = 'student' THEN (SELECT c.class_name FROM students s 
-                                                             JOIN student_classes sc ON s.id = sc.student_id 
-                                                             JOIN classes c ON sc.class_id = c.id 
-                                                             WHERE s.user_id = la.user_id LIMIT 1)
-                          ELSE 'N/A'
-                      END as class_name,
-                      approver.first_name as approver_first_name,
-                      approver.last_name as approver_last_name
-                      FROM leave_applications la
-                      JOIN users u ON la.user_id = u.id
-                      LEFT JOIN users approver ON la.approved_by = approver.id
-                      WHERE la.id = ?");
-$stmt->execute([$leave_id]);
-$leave = $stmt->fetch(PDO::FETCH_ASSOC);
+// Get filter parameters
+$status_filter = $_GET['status'] ?? 'all';
+$user_type_filter = $_GET['user_type'] ?? 'all';
+$date_from = $_GET['date_from'] ?? '';
+$date_to = $_GET['date_to'] ?? '';
 
-if (!$leave) {
-    header('Location: leave_management.php');
-    exit;
+// Build query conditions
+$where_conditions = [];
+$params = [];
+
+if ($status_filter != 'all') {
+    $where_conditions[] = "la.status = ?";
+    $params[] = $status_filter;
 }
 
-// Calculate leave duration details
-$from_date = new DateTime($leave['from_date']);
-$to_date = new DateTime($leave['to_date']);
-$duration = $from_date->diff($to_date)->days + 1;
+if ($user_type_filter != 'all') {
+    $where_conditions[] = "la.user_type = ?";
+    $params[] = $user_type_filter;
+}
+
+if ($date_from) {
+    $where_conditions[] = "la.from_date >= ?";
+    $params[] = $date_from;
+}
+
+if ($date_to) {
+    $where_conditions[] = "la.to_date <= ?";
+    $params[] = $date_to;
+}
+
+$where_clause = !empty($where_conditions) ? 'WHERE ' . implode(' AND ', $where_conditions) : '';
+
+// Pagination setup
+$page = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
+$per_page = 10;
+$offset = ($page - 1) * $per_page;
+
+// Get total count for pagination
+$count_query = "SELECT COUNT(*) FROM leave_applications la
+                JOIN users u ON la.user_id = u.id
+                LEFT JOIN users approver ON la.approved_by = approver.id
+                $where_clause";
+$count_stmt = $pdo->prepare($count_query);
+$count_stmt->execute($params);
+$total_records = $count_stmt->fetchColumn();
+$total_pages = ceil($total_records / $per_page);
+
+// Get leave applications with pagination
+$main_query = "SELECT la.*, u.first_name, u.last_name, u.email,
+               CASE 
+                   WHEN la.user_type = 'student' THEN (SELECT student_id FROM students WHERE user_id = la.user_id)
+                   ELSE 'N/A'
+               END as identifier,
+               approver.first_name as approver_first_name,
+               approver.last_name as approver_last_name
+               FROM leave_applications la
+               JOIN users u ON la.user_id = u.id
+               LEFT JOIN users approver ON la.approved_by = approver.id
+               $where_clause
+               ORDER BY la.applied_date DESC
+               LIMIT $offset, $per_page";
+
+$stmt = $pdo->prepare($main_query);
+$stmt->execute($params);
+$leave_applications = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Get statistics
+$stats = [
+    'total_applications' => $pdo->query("SELECT COUNT(*) FROM leave_applications")->fetchColumn(),
+    'pending_applications' => $pdo->query("SELECT COUNT(*) FROM leave_applications WHERE status = 'pending'")->fetchColumn(),
+    'approved_applications' => $pdo->query("SELECT COUNT(*) FROM leave_applications WHERE status = 'approved'")->fetchColumn(),
+    'rejected_applications' => $pdo->query("SELECT COUNT(*) FROM leave_applications WHERE status = 'rejected'")->fetchColumn()
+];
 
 include '../include/sidebar.php';
 ?>

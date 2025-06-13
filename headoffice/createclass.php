@@ -9,349 +9,83 @@ include_once '../App/Models/headoffice/Class.php';
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Create & Manage Classes - School LMS</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <style>
-        :root {
-            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            --success-gradient: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
-            --warning-gradient: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-            --info-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-            --danger-gradient: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
-        }
-
-        a {
-            text-decoration: none;
-        }
-
-        body {
-            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            min-height: 100vh;
-        }
-
-        .main-content {
-            margin-left: 250px;
-            padding: 2rem;
-            min-height: 100vh;
-            max-width: calc(100vw - 250px);
-            overflow-x: hidden;
-        }
-
-        @media (max-width: 768px) {
-            .main-content {
-                margin-left: 0;
-                padding: 1rem;
-                max-width: 100vw;
-            }
-        }
-
-        .page-header {
-            background: var(--primary-gradient);
-            color: white;
-            padding: 2rem;
-            border-radius: 20px;
-            margin-bottom: 2rem;
-            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
-        }
-
-        .page-title {
-            font-size: 2.5rem;
-            font-weight: 700;
-            margin: 0;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-
-        .page-subtitle {
-            font-size: 1.1rem;
-            opacity: 0.9;
-            margin: 0.5rem 0 0 0;
-        }
-
-        .modern-card {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            border-radius: 20px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            overflow: hidden;
-            margin-bottom: 2rem;
-        }
-
-        .card-header-modern {
-            background: var(--primary-gradient);
-            color: white;
-            padding: 1.5rem;
-            border: none;
-        }
-
-        .card-header-modern h5 {
-            margin: 0;
-            font-weight: 600;
-        }
-
-        .form-control-modern {
-            border-radius: 12px;
-            border: 2px solid #e2e8f0;
-            padding: 0.75rem 1rem;
-            transition: all 0.3s ease;
-        }
-
-        .form-control-modern:focus {
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-        }
-
-        .btn-modern {
-            border-radius: 12px;
-            padding: 0.75rem 1.5rem;
-            font-weight: 600;
-            border: none;
-            transition: all 0.3s ease;
-            text-decoration: none;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .btn-primary-modern {
-            background: var(--primary-gradient);
-            color: white;
-        }
-
-        .btn-success-modern {
-            background: var(--success-gradient);
-            color: white;
-        }
-
-        .btn-warning-modern {
-            background: var(--warning-gradient);
-            color: white;
-        }
-
-        .btn-danger-modern {
-            background: var(--danger-gradient);
-            color: white;
-        }
-
-        .btn-info-modern {
-            background: var(--info-gradient);
-            color: white;
-        }
-
-        .btn-modern:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
-        }
-
-        .alert-modern {
-            border-radius: 16px;
-            border: none;
-            padding: 1.5rem;
-            margin-bottom: 2rem;
-            display: flex;
-            align-items: flex-start;
-            gap: 1rem;
-        }
-
-        .alert-icon {
-            font-size: 1.5rem;
-            flex-shrink: 0;
-        }
-
-        .class-card {
-            background: rgba(255, 255, 255, 0.9);
-            border-radius: 16px;
-            padding: 1.5rem;
-            margin-bottom: 1rem;
-            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
-            border-left: 4px solid;
-            transition: transform 0.3s ease;
-        }
-
-        .class-card:hover {
-            transform: translateY(-2px);
-        }
-
-        .class-card.level-1 { border-left-color: #4facfe; }
-        .class-card.level-2 { border-left-color: #11998e; }
-        .class-card.level-3 { border-left-color: #f093fb; }
-        .class-card.level-4 { border-left-color: #ff6b6b; }
-        .class-card.level-5 { border-left-color: #667eea; }
-
-        .class-meta {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-            gap: 1rem;
-            margin: 1rem 0;
-        }
-
-        .meta-item {
-            background: rgba(255, 255, 255, 0.5);
-            padding: 0.75rem;
-            border-radius: 8px;
-            text-align: center;
-        }
-
-        .meta-label {
-            font-size: 0.875rem;
-            color: #718096;
-            font-weight: 500;
-        }
-
-        .meta-value {
-            font-weight: 600;
-            color: #2d3748;
-            font-size: 1.1rem;
-        }
-
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 1.5rem;
-            margin-bottom: 2rem;
-        }
-
-        .stat-card {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            border-radius: 16px;
-            padding: 1.5rem;
-            text-align: center;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            transition: transform 0.3s ease;
-        }
-
-        .stat-card:hover {
-            transform: translateY(-5px);
-        }
-
-        .stat-icon {
-            width: 60px;
-            height: 60px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 0 auto 1rem;
-            font-size: 1.5rem;
-            color: white;
-        }
-
-        .stat-icon.total { background: var(--primary-gradient); }
-        .stat-icon.active { background: var(--success-gradient); }
-        .stat-icon.students { background: var(--info-gradient); }
-        .stat-icon.teachers { background: var(--warning-gradient); }
-
-        .stat-number {
-            font-size: 2rem;
-            font-weight: 700;
-            color: #2d3748;
-            margin-bottom: 0.5rem;
-        }
-
-        .stat-label {
-            color: #718096;
-            font-weight: 500;
-        }
-
-        .teacher-list {
-            background: rgba(255, 255, 255, 0.3);
-            border-radius: 8px;
-            padding: 0.75rem;
-            margin-top: 1rem;
-        }
-
-        .teacher-item {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            margin-bottom: 0.5rem;
-        }
-
-        .teacher-item:last-child {
-            margin-bottom: 0;
-        }
-
-        @media (max-width: 768px) {
-            .page-title {
-                font-size: 2rem;
-            }
-            
-            .class-meta {
-                grid-template-columns: 1fr;
-            }
-            
-            .btn-modern {
-                justify-content: center;
-                margin-bottom: 0.5rem;
-            }
-        }
-    </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="../assets/css/ui.css">
 </head>
-<body>
-    <div class="d-flex">
-        <div class="main-content">
+<body class="bg-grey-50">
+    <!-- Main Content -->
+    <main class="main-content">
+        <div class="p-4 lg:p-6">
             <!-- Page Header -->
-            <div class="page-header">
-                <h1 class="page-title">
-                    <i class="fas fa-school me-3"></i>
+            <div class="bg-gradient-to-r from-blue-700 to-indigo-800 rounded-xl p-6 text-white shadow-lg mb-6">
+                <h1 class="text-2xl md:text-3xl font-bold mb-2">
+                    <i class="fas fa-school mr-3"></i>
                     Class Management
                 </h1>
-                <p class="page-subtitle">Create and manage classes for your school</p>
+                <p class="text-blue-100">Create and manage classes for your school</p>
             </div>
 
             <!-- Alert Messages -->
             <?= $msg ?>
 
             <!-- Statistics -->
-            <div class="stats-grid">
-                <div class="stat-card">
-                    <div class="stat-icon total">
-                        <i class="fas fa-school"></i>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                <div class="bg-white rounded-xl p-5 shadow hover:shadow-md transition-shadow">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center text-blue-600">
+                            <i class="fas fa-school text-xl"></i>
+                        </div>
                     </div>
-                    <div class="stat-number"><?= count($existing_classes) ?></div>
-                    <div class="stat-label">Total Classes</div>
+                    <p class="text-2xl font-bold text-grey-800"><?= count($existing_classes) ?></p>
+                    <p class="text-sm text-grey-500">Total Classes</p>
                 </div>
-                <div class="stat-card">
-                    <div class="stat-icon active">
-                        <i class="fas fa-check-circle"></i>
+                
+                <div class="bg-white rounded-xl p-5 shadow hover:shadow-md transition-shadow">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center text-green-600">
+                            <i class="fas fa-check-circle text-xl"></i>
+                        </div>
                     </div>
-                    <div class="stat-number"><?= count(array_filter($existing_classes, fn($c) => $c['is_active'])) ?></div>
-                    <div class="stat-label">Active Classes</div>
+                    <p class="text-2xl font-bold text-grey-800"><?= count(array_filter($existing_classes, fn($c) => $c['is_active'])) ?></p>
+                    <p class="text-sm text-grey-500">Active Classes</p>
                 </div>
-                <div class="stat-card">
-                    <div class="stat-icon students">
-                        <i class="fas fa-users"></i>
+                
+                <div class="bg-white rounded-xl p-5 shadow hover:shadow-md transition-shadow">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="w-12 h-12 bg-indigo-100 rounded-lg flex items-center justify-center text-indigo-600">
+                            <i class="fas fa-users text-xl"></i>
+                        </div>
                     </div>
-                    <div class="stat-number"><?= array_sum(array_column($existing_classes, 'student_count')) ?></div>
-                    <div class="stat-label">Total Students</div>
+                    <p class="text-2xl font-bold text-grey-800"><?= array_sum(array_column($existing_classes, 'student_count')) ?></p>
+                    <p class="text-sm text-grey-500">Total Students</p>
                 </div>
-                <div class="stat-card">
-                    <div class="stat-icon teachers">
-                        <i class="fas fa-chalkboard-teacher"></i>
+                
+                <div class="bg-white rounded-xl p-5 shadow hover:shadow-md transition-shadow">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center text-purple-600">
+                            <i class="fas fa-chalkboard-teacher text-xl"></i>
+                        </div>
                     </div>
-                    <div class="stat-number"><?= count($teachers) ?></div>
-                    <div class="stat-label">Available Teachers</div>
+                    <p class="text-2xl font-bold text-grey-800"><?= count($teachers) ?></p>
+                    <p class="text-sm text-grey-500">Available Teachers</p>
                 </div>
             </div>
 
-            <div class="row">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <!-- Create Class Form -->
-                <div class="col-lg-4">
-                    <div class="modern-card">
-                        <div class="card-header-modern">
-                            <h5>
-                                <i class="fas fa-plus-circle me-2"></i>
+                <div class="lg:col-span-1">
+                    <div class="bg-white rounded-xl shadow overflow-hidden">
+                        <div class="bg-gradient-to-r from-blue-600 to-blue-700 p-5">
+                            <h2 class="text-lg font-bold text-white flex items-center">
+                                <i class="fas fa-plus-circle mr-2"></i>
                                 Create New Class
-                            </h5>
+                            </h2>
                         </div>
-                        <div class="card-body">
+                        <div class="p-6">
                             <form method="post">
-                                <div class="mb-3">
-                                    <label class="form-label">Academic Year</label>
-                                    <select name="academic_year_id" class="form-select form-control-modern" required>
+                                <div class="mb-4">
+                                    <label class="block text-sm font-medium text-grey-700 mb-1">Academic Year</label>
+                                    <select name="academic_year_id" class="w-full rounded-lg border-grey-300 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-500 focus:ring-opacity-50" required>
                                         <option value="">-- Select Academic Year --</option>
                                         <?php foreach ($academic_years as $year): ?>
                                         <option value="<?= $year['id'] ?>" <?= $year['is_current'] ? 'selected' : '' ?>>
@@ -362,40 +96,40 @@ include_once '../App/Models/headoffice/Class.php';
                                     </select>
                                 </div>
 
-                                <div class="row">
-                                    <div class="col-md-8 mb-3">
-                                        <label class="form-label">Class Name</label>
-                                        <input type="text" name="class_name" class="form-control form-control-modern" required placeholder="e.g., Class 1, Grade 5">
+                                <div class="grid grid-cols-3 gap-4 mb-4">
+                                    <div class="col-span-2">
+                                        <label class="block text-sm font-medium text-grey-700 mb-1">Class Name</label>
+                                        <input type="text" name="class_name" class="w-full rounded-lg border-grey-300 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-500 focus:ring-opacity-50" required placeholder="e.g., Class 1, Grade 5">
                                     </div>
-                                    <div class="col-md-4 mb-3">
-                                        <label class="form-label">Section</label>
-                                        <input type="text" name="section" class="form-control form-control-modern" value="A" required placeholder="A, B, C">
+                                    <div>
+                                        <label class="block text-sm font-medium text-grey-700 mb-1">Section</label>
+                                        <input type="text" name="section" class="w-full rounded-lg border-grey-300 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-500 focus:ring-opacity-50" value="A" required placeholder="A, B, C">
                                     </div>
                                 </div>
 
-                                <div class="row">
-                                    <div class="col-md-6 mb-3">
-                                        <label class="form-label">Class Level</label>
-                                        <select name="class_level" class="form-select form-control-modern" required>
+                                <div class="grid grid-cols-2 gap-4 mb-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-grey-700 mb-1">Class Level</label>
+                                        <select name="class_level" class="w-full rounded-lg border-grey-300 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-500 focus:ring-opacity-50" required>
                                             <option value="">-- Select Level --</option>
                                             <?php for ($i = 1; $i <= 12; $i++): ?>
                                             <option value="<?= $i ?>">Level <?= $i ?></option>
                                             <?php endfor; ?>
                                         </select>
                                     </div>
-                                    <div class="col-md-6 mb-3">
-                                        <label class="form-label">Capacity</label>
-                                        <input type="number" name="capacity" class="form-control form-control-modern" value="40" required min="1" max="100">
+                                    <div>
+                                        <label class="block text-sm font-medium text-grey-700 mb-1">Capacity</label>
+                                        <input type="number" name="capacity" class="w-full rounded-lg border-grey-300 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-500 focus:ring-opacity-50" value="40" required min="1" max="100">
                                     </div>
                                 </div>
 
-                                <div class="mb-3">
-                                    <label class="form-label">Description (Optional)</label>
-                                    <textarea name="description" class="form-control form-control-modern" rows="3" placeholder="Additional information about the class"></textarea>
+                                <div class="mb-4">
+                                    <label class="block text-sm font-medium text-grey-700 mb-1">Description (Optional)</label>
+                                    <textarea name="description" class="w-full rounded-lg border-grey-300 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-500 focus:ring-opacity-50" rows="3" placeholder="Additional information about the class"></textarea>
                                 </div>
 
-                                <button type="submit" class="btn btn-primary-modern btn-modern w-100">
-                                    <i class="fas fa-plus"></i>
+                                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg flex items-center justify-center">
+                                    <i class="fas fa-plus mr-2"></i>
                                     Create Class
                                 </button>
                             </form>
@@ -404,167 +138,193 @@ include_once '../App/Models/headoffice/Class.php';
                 </div>
 
                 <!-- Existing Classes -->
-                <div class="col-lg-8">
-                    <div class="modern-card">
-                        <div class="card-header-modern">
-                            <h5>
-                                <i class="fas fa-list me-2"></i>
+                <div class="lg:col-span-2">
+                    <div class="bg-white rounded-xl shadow overflow-hidden">
+                        <div class="bg-gradient-to-r from-indigo-600 to-indigo-700 p-5">
+                            <h2 class="text-lg font-bold text-white flex items-center">
+                                <i class="fas fa-list mr-2"></i>
                                 Existing Classes (<?= count($existing_classes) ?>)
-                            </h5>
+                            </h2>
                         </div>
-                        <div class="card-body">
+                        <div class="p-6">
                             <?php if (empty($existing_classes)): ?>
-                            <div class="text-center py-5">
-                                <i class="fas fa-school fa-4x text-muted mb-3"></i>
-                                <h5 class="text-muted">No classes created yet</h5>
-                                <p class="text-muted">Create your first class using the form on the left.</p>
+                            <div class="text-center py-10">
+                                <i class="fas fa-school fa-4x text-grey-300 mb-3"></i>
+                                <h5 class="text-grey-500 mb-1">No classes created yet</h5>
+                                <p class="text-grey-400">Create your first class using the form on the left.</p>
                             </div>
                             <?php else: ?>
-                            <?php foreach ($existing_classes as $class): ?>
-                            <div class="class-card level-<?= $class['class_level'] ?>">
-                                <div class="d-flex justify-content-between align-items-start mb-2">
-                                    <div>
-                                        <h6 class="mb-1">
-                                            <?= htmlspecialchars($class['class_name']) ?> - Section <?= htmlspecialchars($class['section']) ?>
-                                        </h6>
-                                        <div class="d-flex gap-2 align-items-center">
-                                            <span class="badge bg-primary">Level <?= $class['class_level'] ?></span>
-                                            <small class="text-muted"><?= htmlspecialchars($class['year_name']) ?></small>
-                                            <?php if ($class['is_active']): ?>
-                                            <span class="badge bg-success">Active</span>
-                                            <?php else: ?>
-                                            <span class="badge bg-secondary">Inactive</span>
-                                            <?php endif; ?>
+                            <div class="space-y-4">
+                                <?php foreach ($existing_classes as $class): ?>
+                                <div class="border border-grey-200 rounded-xl overflow-hidden shadow-sm">
+                                    <div class="p-4 border-b border-grey-200">
+                                        <div class="flex justify-between items-start">
+                                            <div>
+                                                <h6 class="text-lg font-semibold text-grey-800 mb-1">
+                                                    <?= htmlspecialchars($class['class_name']) ?> - Section <?= htmlspecialchars($class['section']) ?>
+                                                </h6>
+                                                <div class="flex flex-wrap gap-2 items-center">
+                                                    <span class="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium">Level <?= $class['class_level'] ?></span>
+                                                    <span class="text-grey-500 text-sm"><?= htmlspecialchars($class['year_name']) ?></span>
+                                                    <?php if ($class['is_active']): ?>
+                                                    <span class="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">Active</span>
+                                                    <?php else: ?>
+                                                    <span class="px-2 py-1 bg-grey-100 text-grey-800 rounded-full text-xs font-medium">Inactive</span>
+                                                    <?php endif; ?>
+                                                </div>
+                                            </div>
+                                            <div class="dropdown">
+                                                <button class="p-2 text-grey-500 hover:text-grey-700 hover:bg-grey-100 rounded-lg">
+                                                    <i class="fas fa-ellipsis-v"></i>
+                                                </button>
+                                                <div class="dropdown-menu hidden absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg z-10">
+                                                    <a href="class_details.php?id=<?= $class['id'] ?>" class="block px-4 py-2 text-grey-700 hover:bg-grey-100">
+                                                        <i class="fas fa-eye mr-2"></i>View Details
+                                                    </a>
+                                                    <a href="manage_students.php?class_id=<?= $class['id'] ?>" class="block px-4 py-2 text-grey-700 hover:bg-grey-100">
+                                                        <i class="fas fa-users mr-2"></i>Manage Students
+                                                    </a>
+                                                    <a href="assignteacher.php?class_id=<?= $class['id'] ?>" class="block px-4 py-2 text-grey-700 hover:bg-grey-100">
+                                                        <i class="fas fa-chalkboard-teacher mr-2"></i>Assign Teachers
+                                                    </a>
+                                                    <hr class="my-1 border-grey-200">
+                                                    <form method="post" class="block" onsubmit="return confirm('Are you sure you want to delete this class? This action cannot be undone.')">
+                                                        <input type="hidden" name="class_id" value="<?= $class['id'] ?>">
+                                                        <button type="submit" name="delete_class" class="w-full text-left px-4 py-2 text-red-600 hover:bg-grey-100">
+                                                            <i class="fas fa-trash mr-2"></i>Delete Class
+                                                        </button>
+                                                    </form>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
-                                    <div class="dropdown">
-                                        <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                                            <i class="fas fa-ellipsis-v"></i>
-                                        </button>
-                                        <ul class="dropdown-menu">
-                                            <li><a class="dropdown-item" href="class_details.php?id=<?= $class['id'] ?>">
-                                                <i class="fas fa-eye me-2"></i>View Details
-                                            </a></li>
-                                            <li><a class="dropdown-item" href="manage_students.php?class_id=<?= $class['id'] ?>">
-                                                <i class="fas fa-users me-2"></i>Manage Students
-                                            </a></li>
-                                            <li><a class="dropdown-item" href="assign_teachers.php?class_id=<?= $class['id'] ?>">
-                                                <i class="fas fa-chalkboard-teacher me-2"></i>Assign Teachers
-                                            </a></li>
-                                            <li><hr class="dropdown-divider"></li>
-                                            <li>
-                                                <form method="post" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this class? This action cannot be undone.')">
-                                                    <input type="hidden" name="class_id" value="<?= $class['id'] ?>">
-                                                    <button type="submit" name="delete_class" class="dropdown-item text-danger">
-                                                        <i class="fas fa-trash me-2"></i>Delete Class
-                                                    </button>
-                                                </form>
-                                            </li>
-                                        </ul>
-                                    </div>
-                                </div>
+                                    
+                                    <div class="p-4">
+                                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                                            <div class="bg-grey-50 p-3 rounded-lg">
+                                                <div class="text-xs text-grey-500 mb-1">Students</div>
+                                                <div class="text-sm font-medium text-grey-800"><?= $class['student_count'] ?>/<?= $class['capacity'] ?></div>
+                                            </div>
+                                            <div class="bg-grey-50 p-3 rounded-lg">
+                                                <div class="text-xs text-grey-500 mb-1">Capacity</div>
+                                                <div class="text-sm font-medium text-grey-800"><?= $class['capacity'] ?></div>
+                                            </div>
+                                            <div class="bg-grey-50 p-3 rounded-lg">
+                                                <div class="text-xs text-grey-500 mb-1">Subjects</div>
+                                                <div class="text-sm font-medium text-grey-800"><?= $class['subject_count'] ?></div>
+                                            </div>
+                                            <div class="bg-grey-50 p-3 rounded-lg">
+                                                <div class="text-xs text-grey-500 mb-1">Created</div>
+                                                <div class="text-sm font-medium text-grey-800"><?= htmlspecialchars(date('M d, Y', strtotime($class['created_at']))) ?></div>
+                                            </div>
+                                        </div>
 
-                                <div class="class-meta">
-                                    <div class="meta-item">
-                                        <div class="meta-label">Students</div>
-                                        <div class="meta-value"><?= $class['student_count'] ?>/<?= $class['capacity'] ?></div>
-                                    </div>
-                                    <div class="meta-item">
-                                        <div class="meta-label">Capacity</div>
-                                        <div class="meta-value"><?= $class['capacity'] ?></div>
-                                    </div>
-                                    <div class="meta-item">
-                                        <div class="meta-label">Subjects</div>
-                                        <div class="meta-value"><?= $class['subject_count'] ?></div>
-                                    </div>
-                                    <div class="meta-item">
-                                        <div class="meta-label">Created</div>
-                                        <div class="meta-value"><?= htmlspecialchars(date('M d, Y', strtotime($class['created_at']))) ?></div>
-                                    </div>
-                                </div>
+                                        <!-- Teachers List -->
+                                        <?php if (isset($class_teachers[$class['id']])): ?>
+                                        <div class="bg-grey-50 p-3 rounded-lg mb-4">
+                                            <div class="text-xs text-grey-500 mb-2">
+                                                <i class="fas fa-chalkboard-teacher mr-1"></i>
+                                                Assigned Teachers:
+                                            </div>
+                                            <div class="flex flex-wrap gap-2">
+                                                <?php foreach ($class_teachers[$class['id']] as $teacher): ?>
+                                                <div class="flex items-center bg-white px-2 py-1 rounded border border-grey-200">
+                                                    <span class="px-2 py-0.5 bg-blue-100 text-blue-800 rounded text-xs mr-1"><?= htmlspecialchars($teacher['subject_name']) ?></span>
+                                                    <span class="text-xs text-grey-700"><?= htmlspecialchars($teacher['first_name'] . ' ' . $teacher['last_name']) ?></span>
+                                                </div>
+                                                <?php endforeach; ?>
+                                            </div>
+                                        </div>
+                                        <?php endif; ?>
 
-                                <!-- Teachers List -->
-                                <?php if (isset($class_teachers[$class['id']])): ?>
-                                <div class="teacher-list">
-                                    <small class="text-muted mb-2 d-block">
-                                        <i class="fas fa-chalkboard-teacher me-1"></i>
-                                        Assigned Teachers:
-                                    </small>
-                                    <?php foreach ($class_teachers[$class['id']] as $teacher): ?>
-                                    <div class="teacher-item">
-                                        <span class="badge bg-info"><?= htmlspecialchars($teacher['subject_name']) ?></span>
-                                        <small><?= htmlspecialchars($teacher['first_name'] . ' ' . $teacher['last_name']) ?></small>
-                                    </div>
-                                    <?php endforeach; ?>
-                                </div>
-                                <?php endif; ?>
+                                        <!-- Student Capacity Progress -->
+                                        <div class="mb-4">
+                                            <div class="flex justify-between items-center mb-1">
+                                                <span class="text-xs text-grey-500">Student Capacity</span>
+                                                <span class="text-xs text-grey-500">
+                                                    <?= $class['capacity'] > 0 ? round(($class['student_count'] / $class['capacity']) * 100) : 0 ?>%
+                                                </span>
+                                            </div>
+                                            <div class="h-1.5 bg-grey-200 rounded-full overflow-hidden">
+                                                <div class="h-full bg-green-500 rounded-full" style="width: <?= $class['capacity'] > 0 ? ($class['student_count'] / $class['capacity']) * 100 : 0 ?>%"></div>
+                                            </div>
+                                        </div>
 
-                                <!-- Student Capacity Progress -->
-                                <div class="mb-3">
-                                    <div class="d-flex justify-content-between align-items-center mb-1">
-                                        <small class="text-muted">Student Capacity</small>
-                                        <small class="text-muted">
-                                            <?= $class['capacity'] > 0 ? round(($class['student_count'] / $class['capacity']) * 100) : 0 ?>%
-                                        </small>
-                                    </div>
-                                    <div class="progress" style="height: 6px;">
-                                        <div class="progress-bar bg-success" style="width: <?= $class['capacity'] > 0 ? ($class['student_count'] / $class['capacity']) * 100 : 0 ?>%"></div>
+                                        <div class="flex flex-wrap gap-2">
+                                            <a href="class_details.php?id=<?= $class['id'] ?>" class="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-sm flex items-center">
+                                                <i class="fas fa-eye mr-1"></i>
+                                                View Details
+                                            </a>
+                                            <a href="manage_students.php?class_id=<?= $class['id'] ?>" class="px-3 py-1.5 bg-green-600 text-white rounded-lg text-sm flex items-center">
+                                                <i class="fas fa-users mr-1"></i>
+                                                Students (<?= $class['student_count'] ?>)
+                                            </a>
+                                            <a href="assignteacher.php?class_id=<?= $class['id'] ?>" class="px-3 py-1.5 bg-purple-600 text-white rounded-lg text-sm flex items-center">
+                                                <i class="fas fa-chalkboard-teacher mr-1"></i>
+                                                Teachers
+                                            </a>
+                                        </div>
                                     </div>
                                 </div>
-
-                                <div class="d-flex gap-2 flex-wrap">
-                                    <a href="class_details.php?id=<?= $class['id'] ?>" class="btn btn-sm btn-info-modern btn-modern">
-                                        <i class="fas fa-eye"></i>
-                                        View Details
-                                    </a>
-                                    <a href="manage_students.php?class_id=<?= $class['id'] ?>" class="btn btn-sm btn-success-modern btn-modern">
-                                        <i class="fas fa-users"></i>
-                                        Students (<?= $class['student_count'] ?>)
-                                    </a>
-                                    <a href="assign_teachers.php?class_id=<?= $class['id'] ?>" class="btn btn-sm btn-warning-modern btn-modern">
-                                        <i class="fas fa-chalkboard-teacher"></i>
-                                        Teachers
-                                    </a>
-                                </div>
+                                <?php endforeach; ?>
                             </div>
-                            <?php endforeach; ?>
                             <?php endif; ?>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
-    </div>
+    </main>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Include sidebar -->
+    <?php include '../include/sidebar.php'; ?>
+
     <script>
-        // Auto-dismiss alerts
-        setTimeout(() => {
-            const alerts = document.querySelectorAll('.alert');
-            alerts.forEach(alert => {
-                alert.style.transition = 'opacity 0.5s ease';
-                alert.style.opacity = '0';
-                setTimeout(() => alert.remove(), 500);
+        // Dropdown functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            const dropdownButtons = document.querySelectorAll('.dropdown button');
+            
+            dropdownButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    const menu = this.nextElementSibling;
+                    menu.classList.toggle('hidden');
+                    
+                    // Close other dropdowns
+                    dropdownButtons.forEach(otherButton => {
+                        if (otherButton !== button) {
+                            otherButton.nextElementSibling.classList.add('hidden');
+                        }
+                    });
+                });
             });
-        }, 5000);
+            
+            // Close dropdowns when clicking outside
+            document.addEventListener('click', function(event) {
+                if (!event.target.closest('.dropdown')) {
+                    document.querySelectorAll('.dropdown-menu').forEach(menu => {
+                        menu.classList.add('hidden');
+                    });
+                }
+            });
+            
+            // Form validation
+            document.querySelector('form').addEventListener('submit', function(e) {
+                const className = document.querySelector('input[name="class_name"]').value.trim();
+                const classLevel = document.querySelector('select[name="class_level"]').value;
+                const capacity = document.querySelector('input[name="capacity"]').value;
 
-        // Form validation
-        document.querySelector('form').addEventListener('submit', function(e) {
-            const className = document.querySelector('input[name="class_name"]').value.trim();
-            const classLevel = document.querySelector('select[name="class_level"]').value;
-            const capacity = document.querySelector('input[name="capacity"]').value;
+                if (!className || !classLevel || !capacity) {
+                    e.preventDefault();
+                    alert('Please fill in all required fields.');
+                    return false;
+                }
 
-            if (!className || !classLevel || !capacity) {
-                e.preventDefault();
-                alert('Please fill in all required fields.');
-                return false;
-            }
-
-            if (parseInt(capacity) < 1 || parseInt(capacity) > 100) {
-                e.preventDefault();
-                alert('Class capacity must be between 1 and 100.');
-                return false;
-            }
+                if (parseInt(capacity) < 1 || parseInt(capacity) > 100) {
+                    e.preventDefault();
+                    alert('Class capacity must be between 1 and 100.');
+                    return false;
+                }
+            });
         });
     </script>
 </body>

@@ -1,6 +1,109 @@
-<?php 
-// Include necessary files
-include_once '../App/Models/headoffice/Index.php';
+<?php
+include '../include/connect.php';
+include '../include/session.php';
+
+requireRole('principal');
+
+$user = getCurrentUser($pdo);
+$msg = "";
+
+// Get leave application ID
+$leave_id = $_GET['id'] ?? 0;
+
+if (!$leave_id) {
+    header('Location: leave_management.php');
+    exit;
+}
+
+// Handle leave approval/rejection
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action'])) {
+    $action = $_POST['action'];
+    $remarks = $_POST['remarks'] ?? '';
+    
+    try {
+        if ($action == 'approve') {
+            $stmt = $pdo->prepare("UPDATE leave_applications 
+                                  SET status = 'approved', approved_by = ?, approved_date = NOW(), rejection_reason = ?
+                                  WHERE id = ? AND status = 'pending'");
+            $stmt->execute([$user['id'], $remarks, $leave_id]);
+            
+            if ($stmt->rowCount() > 0) {
+                $msg = "<div class='alert alert-success alert-modern'>
+                        <div class='alert-icon'>✅</div>
+                        <div><strong>Leave application approved successfully!</strong></div>
+                       </div>";
+                logActivity($pdo, 'leave_approved', 'leave_applications', $leave_id);
+            } else {
+                $msg = "<div class='alert alert-warning alert-modern'>
+                        <div class='alert-icon'>⚠️</div>
+                        <div><strong>Leave application could not be approved. It may have already been processed.</strong></div>
+                       </div>";
+            }
+        } elseif ($action == 'reject') {
+            if (empty($remarks)) {
+                $msg = "<div class='alert alert-danger alert-modern'>
+                        <div class='alert-icon'>❌</div>
+                        <div><strong>Rejection reason is required!</strong></div>
+                       </div>";
+            } else {
+                $stmt = $pdo->prepare("UPDATE leave_applications 
+                                      SET status = 'rejected', approved_by = ?, approved_date = NOW(), rejection_reason = ?
+                                      WHERE id = ? AND status = 'pending'");
+                $stmt->execute([$user['id'], $remarks, $leave_id]);
+                
+                if ($stmt->rowCount() > 0) {
+                    $msg = "<div class='alert alert-success alert-modern'>
+                            <div class='alert-icon'>✅</div>
+                            <div><strong>Leave application rejected successfully!</strong></div>
+                           </div>";
+                    logActivity($pdo, 'leave_rejected', 'leave_applications', $leave_id);
+                } else {
+                    $msg = "<div class='alert alert-warning alert-modern'>
+                            <div class='alert-icon'>⚠️</div>
+                            <div><strong>Leave application could not be rejected. It may have already been processed.</strong></div>
+                           </div>";
+                }
+            }
+        }
+    } catch (PDOException $e) {
+        $msg = "<div class='alert alert-danger alert-modern'>
+                <div class='alert-icon'>❌</div>
+                <div><strong>Error processing request. Please try again.</strong></div>
+               </div>";
+    }
+}
+
+// Fetch leave application details
+$stmt = $pdo->prepare("SELECT la.*, u.first_name, u.last_name, u.email, u.phone,
+                      CASE 
+                          WHEN la.user_type = 'student' THEN (SELECT student_id FROM students WHERE user_id = la.user_id)
+                          ELSE 'N/A'
+                      END as identifier,
+                      CASE 
+                          WHEN la.user_type = 'student' THEN (SELECT c.class_name FROM students s 
+                                                             JOIN student_classes sc ON s.id = sc.student_id 
+                                                             JOIN classes c ON sc.class_id = c.id 
+                                                             WHERE s.user_id = la.user_id LIMIT 1)
+                          ELSE 'N/A'
+                      END as class_name,
+                      approver.first_name as approver_first_name,
+                      approver.last_name as approver_last_name
+                      FROM leave_applications la
+                      JOIN users u ON la.user_id = u.id
+                      LEFT JOIN users approver ON la.approved_by = approver.id
+                      WHERE la.id = ?");
+$stmt->execute([$leave_id]);
+$leave = $stmt->fetch(PDO::FETCH_ASSOC);
+
+if (!$leave) {
+    header('Location: leave_management.php');
+    exit;
+}
+
+// Calculate leave duration details
+$from_date = new DateTime($leave['from_date']);
+$to_date = new DateTime($leave['to_date']);
+$duration = $from_date->diff($to_date)->days + 1;
 ?>
 
 <!DOCTYPE html>
@@ -11,6 +114,7 @@ include_once '../App/Models/headoffice/Index.php';
     <title>Leave Details - School LMS</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="../assets/css/ui.css">
     <style>
         :root {
             --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -31,19 +135,9 @@ include_once '../App/Models/headoffice/Index.php';
         }
 
         .main-content {
-            margin-left: 250px;
             padding: 2rem;
             min-height: 100vh;
-            max-width: calc(100vw - 250px);
             overflow-x: hidden;
-        }
-
-        @media (max-width: 768px) {
-            .main-content {
-                margin-left: 0;
-                padding: 1rem;
-                max-width: 100vw;
-            }
         }
 
         .page-header {
@@ -320,203 +414,202 @@ include_once '../App/Models/headoffice/Index.php';
         }
     </style>
 </head>
-<body>
-    <div class="d-flex">
-        <div class="main-content">
-            <!-- Page Header -->
-            <div class="page-header">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h1 class="page-title">Leave Application Details</h1>
-                        <p class="page-subtitle">Review detailed information about this leave request</p>
-                    </div>
-                    <a href="leave_management.php" class="btn btn-light btn-modern">
-                        <i class="fas fa-arrow-left"></i>
-                        Back to Leave Management
-                    </a>
+<body class="bg-grey-50">
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Page Header -->
+        <div class="page-header">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="page-title">Leave Application Details</h1>
+                    <p class="page-subtitle">Review detailed information about this leave request</p>
                 </div>
+                <a href="leave_management.php" class="btn btn-light btn-modern">
+                    <i class="fas fa-arrow-left"></i>
+                    Back to Leave Management
+                </a>
             </div>
-
-            <!-- Alert Messages -->
-            <?= $msg ?>
-
-            <!-- User Information Card -->
-            <div class="user-info-card">
-                <div class="row align-items-center">
-                    <div class="col-md-2 text-center">
-                        <div class="user-avatar mx-auto">
-                            <?= strtoupper(substr($leave['first_name'], 0, 1) . substr($leave['last_name'], 0, 1)) ?>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <h4 class="mb-2"><?= htmlspecialchars($leave['first_name'] . ' ' . $leave['last_name']) ?></h4>
-                        <div class="d-flex gap-2 mb-2">
-                            <span class="badge badge-modern badge-type-<?= $leave['user_type'] ?>">
-                                <?= htmlspecialchars(ucfirst($leave['user_type'])) ?>
-                            </span>
-                            <span class="badge badge-modern badge-status-<?= $leave['status'] ?>">
-                                <?= htmlspecialchars(ucfirst($leave['status'])) ?>
-                            </span>
-                        </div>
-                        <p class="text-muted mb-1">
-                            <i class="fas fa-envelope me-2"></i>
-                            <?= htmlspecialchars($leave['email']) ?>
-                        </p>
-                        <?php if ($leave['phone']): ?>
-                        <p class="text-muted mb-1">
-                            <i class="fas fa-phone me-2"></i>
-                            <?= htmlspecialchars($leave['phone']) ?>
-                        </p>
-                        <?php endif; ?>
-                        <?php if ($leave['user_type'] == 'student'): ?>
-                        <p class="text-muted mb-0">
-                            <i class="fas fa-id-card me-2"></i>
-                            Student ID: <?= htmlspecialchars($leave['identifier']) ?>
-                            <?php if ($leave['class_name']): ?>
-                            | Class: <?= htmlspecialchars($leave['class_name']) ?>
-                            <?php endif; ?>
-                        </p>
-                        <?php endif; ?>
-                    </div>
-                    <div class="col-md-4 text-end">
-                        <?php if ($leave['status'] == 'pending'): ?>
-                        <button type="button" class="btn btn-success-modern btn-modern me-2" 
-                                data-bs-toggle="modal" 
-                                data-bs-target="#approveModal">
-                            <i class="fas fa-check"></i>
-                            Approve
-                        </button>
-                        <button type="button" class="btn btn-danger-modern btn-modern" 
-                                data-bs-toggle="modal" 
-                                data-bs-target="#rejectModal">
-                            <i class="fas fa-times"></i>
-                            Reject
-                        </button>
-                        <?php endif; ?>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Leave Details -->
-            <div class="modern-card">
-                <div class="card-header-modern">
-                    <h5>Leave Application Information</h5>
-                </div>
-                <div class="card-body">
-                    <div class="detail-grid">
-                        <div class="detail-item primary">
-                            <div class="detail-label">Leave Type</div>
-                            <div class="detail-value"><?= htmlspecialchars(ucfirst($leave['leave_type'])) ?></div>
-                        </div>
-                        <div class="detail-item info">
-                            <div class="detail-label">From Date</div>
-                            <div class="detail-value"><?= htmlspecialchars(date('M d, Y', strtotime($leave['from_date']))) ?></div>
-                        </div>
-                        <div class="detail-item info">
-                            <div class="detail-label">To Date</div>
-                            <div class="detail-value"><?= htmlspecialchars(date('M d, Y', strtotime($leave['to_date']))) ?></div>
-                        </div>
-                        <div class="detail-item warning">
-                            <div class="detail-label">Total Days</div>
-                            <div class="detail-value"><?= $duration ?> days</div>
-                        </div>
-                        <div class="detail-item success">
-                            <div class="detail-label">Applied Date</div>
-                            <div class="detail-value"><?= htmlspecialchars(date('M d, Y g:i A', strtotime($leave['applied_date']))) ?></div>
-                        </div>
-                        <?php if ($leave['emergency_contact']): ?>
-                        <div class="detail-item primary">
-                            <div class="detail-label">Emergency Contact</div>
-                            <div class="detail-value"><?= htmlspecialchars($leave['emergency_contact']) ?></div>
-                        </div>
-                        <?php endif; ?>
-                    </div>
-
-                    <?php if ($leave['reason']): ?>
-                    <div class="detail-item primary mb-3">
-                        <div class="detail-label">Reason for Leave</div>
-                        <div class="detail-value"><?= nl2br(htmlspecialchars($leave['reason'])) ?></div>
-                    </div>
-                    <?php endif; ?>
-
-                    <?php if ($leave['leave_details']): ?>
-                    <div class="detail-item info mb-3">
-                        <div class="detail-label">Additional Details</div>
-                        <div class="detail-value"><?= nl2br(htmlspecialchars($leave['leave_details'])) ?></div>
-                    </div>
-                    <?php endif; ?>
-
-                    <?php if ($leave['attachment_url']): ?>
-                    <div class="detail-item warning">
-                        <div class="detail-label">Attachment</div>
-                        <div class="detail-value">
-                            <div class="attachment-preview">
-                                <?php 
-                                $file_extension = strtolower(pathinfo($leave['attachment_url'], PATHINFO_EXTENSION));
-                                if (in_array($file_extension, ['jpg', 'jpeg', 'png', 'gif'])): 
-                                ?>
-                                <img src="../<?= htmlspecialchars($leave['attachment_url']) ?>" alt="Leave attachment" class="mb-2">
-                                <br>
-                                <?php endif; ?>
-                                <a href="../<?= htmlspecialchars($leave['attachment_url']) ?>" 
-                                   class="btn btn-info-modern btn-modern btn-sm" 
-                                   target="_blank">
-                                    <i class="fas fa-download"></i>
-                                    Download Attachment
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                    <?php endif; ?>
-                </div>
-            </div>
-
-            <!-- Approval History -->
-            <?php if ($leave['status'] != 'pending'): ?>
-            <div class="modern-card">
-                <div class="card-header-modern">
-                    <h5>Approval History</h5>
-                </div>
-                <div class="card-body">
-                    <div class="timeline">
-                        <div class="timeline-item">
-                            <h6 class="mb-2">Application Submitted</h6>
-                            <p class="text-muted mb-1">
-                                <i class="fas fa-calendar me-2"></i>
-                                <?= htmlspecialchars(date('M d, Y g:i A', strtotime($leave['applied_date']))) ?>
-                            </p>
-                            <p class="mb-0">Leave application submitted by <?= htmlspecialchars($leave['first_name'] . ' ' . $leave['last_name']) ?></p>
-                        </div>
-                        
-                        <div class="timeline-item">
-                            <h6 class="mb-2">
-                                Application <?= $leave['status'] == 'approved' ? 'Approved' : 'Rejected' ?>
-                            </h6>
-                            <?php if ($leave['approved_date']): ?>
-                            <p class="text-muted mb-1">
-                                <i class="fas fa-calendar me-2"></i>
-                                <?= htmlspecialchars(date('M d, Y g:i A', strtotime($leave['approved_date']))) ?>
-                            </p>
-                            <?php endif; ?>
-                            <?php if ($leave['approver_first_name']): ?>
-                            <p class="mb-2">
-                                <?= $leave['status'] == 'approved' ? 'Approved' : 'Rejected' ?> by 
-                                <strong><?= htmlspecialchars($leave['approver_first_name'] . ' ' . $leave['approver_last_name']) ?></strong>
-                            </p>
-                            <?php endif; ?>
-                            <?php if ($leave['rejection_reason']): ?>
-                            <div class="alert alert-light">
-                                <strong><?= $leave['status'] == 'approved' ? 'Remarks:' : 'Rejection Reason:' ?></strong><br>
-                                <?= nl2br(htmlspecialchars($leave['rejection_reason'])) ?>
-                            </div>
-                            <?php endif; ?>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <?php endif; ?>
         </div>
-    </div>
+
+        <!-- Alert Messages -->
+        <?= $msg ?>
+
+        <!-- User Information Card -->
+        <div class="user-info-card">
+            <div class="row align-items-center">
+                <div class="col-md-2 text-center">
+                    <div class="user-avatar mx-auto">
+                        <?= strtoupper(substr($leave['first_name'], 0, 1) . substr($leave['last_name'], 0, 1)) ?>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <h4 class="mb-2"><?= htmlspecialchars($leave['first_name'] . ' ' . $leave['last_name']) ?></h4>
+                    <div class="d-flex gap-2 mb-2">
+                        <span class="badge badge-modern badge-type-<?= $leave['user_type'] ?>">
+                            <?= htmlspecialchars(ucfirst($leave['user_type'])) ?>
+                        </span>
+                        <span class="badge badge-modern badge-status-<?= $leave['status'] ?>">
+                            <?= htmlspecialchars(ucfirst($leave['status'])) ?>
+                        </span>
+                    </div>
+                    <p class="text-muted mb-1">
+                        <i class="fas fa-envelope me-2"></i>
+                        <?= htmlspecialchars($leave['email']) ?>
+                    </p>
+                    <?php if ($leave['phone']): ?>
+                    <p class="text-muted mb-1">
+                        <i class="fas fa-phone me-2"></i>
+                        <?= htmlspecialchars($leave['phone']) ?>
+                    </p>
+                    <?php endif; ?>
+                    <?php if ($leave['user_type'] == 'student'): ?>
+                    <p class="text-muted mb-0">
+                        <i class="fas fa-id-card me-2"></i>
+                        Student ID: <?= htmlspecialchars($leave['identifier']) ?>
+                        <?php if ($leave['class_name']): ?>
+                        | Class: <?= htmlspecialchars($leave['class_name']) ?>
+                        <?php endif; ?>
+                    </p>
+                    <?php endif; ?>
+                </div>
+                <div class="col-md-4 text-end">
+                    <?php if ($leave['status'] == 'pending'): ?>
+                    <button type="button" class="btn btn-success-modern btn-modern me-2" 
+                            data-bs-toggle="modal" 
+                            data-bs-target="#approveModal">
+                        <i class="fas fa-check"></i>
+                        Approve
+                    </button>
+                    <button type="button" class="btn btn-danger-modern btn-modern" 
+                            data-bs-toggle="modal" 
+                            data-bs-target="#rejectModal">
+                        <i class="fas fa-times"></i>
+                        Reject
+                    </button>
+                    <?php endif; ?>
+                </div>
+            </div>
+        </div>
+
+        <!-- Leave Details -->
+        <div class="modern-card">
+            <div class="card-header-modern">
+                <h5>Leave Application Information</h5>
+            </div>
+            <div class="card-body">
+                <div class="detail-grid">
+                    <div class="detail-item primary">
+                        <div class="detail-label">Leave Type</div>
+                        <div class="detail-value"><?= htmlspecialchars(ucfirst($leave['leave_type'])) ?></div>
+                    </div>
+                    <div class="detail-item info">
+                        <div class="detail-label">From Date</div>
+                        <div class="detail-value"><?= htmlspecialchars(date('M d, Y', strtotime($leave['from_date']))) ?></div>
+                    </div>
+                    <div class="detail-item info">
+                        <div class="detail-label">To Date</div>
+                        <div class="detail-value"><?= htmlspecialchars(date('M d, Y', strtotime($leave['to_date']))) ?></div>
+                    </div>
+                    <div class="detail-item warning">
+                        <div class="detail-label">Total Days</div>
+                        <div class="detail-value"><?= $duration ?> days</div>
+                    </div>
+                    <div class="detail-item success">
+                        <div class="detail-label">Applied Date</div>
+                        <div class="detail-value"><?= htmlspecialchars(date('M d, Y g:i A', strtotime($leave['applied_date']))) ?></div>
+                    </div>
+                    <?php if ($leave['emergency_contact']): ?>
+                    <div class="detail-item primary">
+                        <div class="detail-label">Emergency Contact</div>
+                        <div class="detail-value"><?= htmlspecialchars($leave['emergency_contact']) ?></div>
+                    </div>
+                    <?php endif; ?>
+                </div>
+
+                <?php if ($leave['reason']): ?>
+                <div class="detail-item primary mb-3">
+                    <div class="detail-label">Reason for Leave</div>
+                    <div class="detail-value"><?= nl2br(htmlspecialchars($leave['reason'])) ?></div>
+                </div>
+                <?php endif; ?>
+
+                <?php if ($leave['leave_details']): ?>
+                <div class="detail-item info mb-3">
+                    <div class="detail-label">Additional Details</div>
+                    <div class="detail-value"><?= nl2br(htmlspecialchars($leave['leave_details'])) ?></div>
+                </div>
+                <?php endif; ?>
+
+                <?php if ($leave['attachment_url']): ?>
+                <div class="detail-item warning">
+                    <div class="detail-label">Attachment</div>
+                    <div class="detail-value">
+                        <div class="attachment-preview">
+                            <?php 
+                            $file_extension = strtolower(pathinfo($leave['attachment_url'], PATHINFO_EXTENSION));
+                            if (in_array($file_extension, ['jpg', 'jpeg', 'png', 'gif'])): 
+                            ?>
+                            <img src="../<?= htmlspecialchars($leave['attachment_url']) ?>" alt="Leave attachment" class="mb-2">
+                            <br>
+                            <?php endif; ?>
+                            <a href="../<?= htmlspecialchars($leave['attachment_url']) ?>" 
+                               class="btn btn-info-modern btn-modern btn-sm" 
+                               target="_blank">
+                                <i class="fas fa-download"></i>
+                                Download Attachment
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                <?php endif; ?>
+            </div>
+        </div>
+
+        <!-- Approval History -->
+        <?php if ($leave['status'] != 'pending'): ?>
+        <div class="modern-card">
+            <div class="card-header-modern">
+                <h5>Approval History</h5>
+            </div>
+            <div class="card-body">
+                <div class="timeline">
+                    <div class="timeline-item">
+                        <h6 class="mb-2">Application Submitted</h6>
+                        <p class="text-muted mb-1">
+                            <i class="fas fa-calendar me-2"></i>
+                            <?= htmlspecialchars(date('M d, Y g:i A', strtotime($leave['applied_date']))) ?>
+                        </p>
+                        <p class="mb-0">Leave application submitted by <?= htmlspecialchars($leave['first_name'] . ' ' . $leave['last_name']) ?></p>
+                    </div>
+                    
+                    <div class="timeline-item">
+                        <h6 class="mb-2">
+                            Application <?= $leave['status'] == 'approved' ? 'Approved' : 'Rejected' ?>
+                        </h6>
+                        <?php if ($leave['approved_date']): ?>
+                        <p class="text-muted mb-1">
+                            <i class="fas fa-calendar me-2"></i>
+                            <?= htmlspecialchars(date('M d, Y g:i A', strtotime($leave['approved_date']))) ?>
+                        </p>
+                        <?php endif; ?>
+                        <?php if ($leave['approver_first_name']): ?>
+                        <p class="mb-2">
+                            <?= $leave['status'] == 'approved' ? 'Approved' : 'Rejected' ?> by 
+                            <strong><?= htmlspecialchars($leave['approver_first_name'] . ' ' . $leave['approver_last_name']) ?></strong>
+                        </p>
+                        <?php endif; ?>
+                        <?php if ($leave['rejection_reason']): ?>
+                        <div class="alert alert-light">
+                            <strong><?= $leave['status'] == 'approved' ? 'Remarks:' : 'Rejection Reason:' ?></strong><br>
+                            <?= nl2br(htmlspecialchars($leave['rejection_reason'])) ?>
+                        </div>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <?php endif; ?>
+    </main>
 
     <!-- Approve Modal -->
     <div class="modal fade modal-modern" id="approveModal" tabindex="-1">
@@ -589,5 +682,8 @@ include_once '../App/Models/headoffice/Index.php';
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Include sidebar -->
+    <?php include '../include/sidebar.php'; ?>
 </body>
 </html>
