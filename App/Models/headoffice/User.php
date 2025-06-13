@@ -321,5 +321,4 @@ $stats = [
     'active_users' => $pdo->query("SELECT COUNT(*) FROM users WHERE is_active = 1")->fetchColumn()
 ];
 
-include '../include/sidebar.php';
 ?>

@@ -91,5 +91,4 @@ try {
     $active_teachers = [];
 }
 
-include '../include/sidebar.php';
 ?>

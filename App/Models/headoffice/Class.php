@@ -127,5 +127,4 @@ if (!empty($existing_classes)) {
     }
 }
 
-include '../include/sidebar.php';
 ?>
