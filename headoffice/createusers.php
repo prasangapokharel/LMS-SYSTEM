@@ -1,7 +1,187 @@
 <?php 
 // Include necessary files
 include_once '../App/Models/headoffice/User.php';
+include_once '../include/connect.php';
+include_once '../include/session.php';
+
+requireRole('principal');
+
+$user = getCurrentUser($pdo);
+$msg = "";
+
+// Handle form submissions
+if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+    if (isset($_POST['action'])) {
+        $action = $_POST['action'];
+        
+        if ($action == 'create_teacher') {
+            $first_name = $_POST['first_name'];
+            $last_name = $_POST['last_name'];
+            $email = $_POST['email'];
+            $phone = $_POST['phone'];
+            $address = $_POST['address'] ?? '';
+            
+            // Generate teacher username and password
+            $teacher_count = $pdo->query("SELECT COUNT(*) FROM users WHERE role_id = 2")->fetchColumn();
+            $username = 'teacher' . str_pad($teacher_count + 1, 3, '0', STR_PAD_LEFT);
+            $password = 'teacher' . rand(100, 999);
+            $password_hash = password_hash($password, PASSWORD_DEFAULT);
+            
+            try {
+                $stmt = $pdo->prepare("INSERT INTO users 
+                                      (username, email, password_hash, first_name, last_name, phone, address, role_id) 
+                                      VALUES (?, ?, ?, ?, ?, ?, ?, 2)");
+                $stmt->execute([$username, $email, $password_hash, $first_name, $last_name, $phone, $address]);
+                
+                logActivity($pdo, 'teacher_created', 'users', $pdo->lastInsertId());
+                $msg = "<div class='bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mb-4 rounded'>
+                        <div class='flex'>
+                            <div class='flex-shrink-0'>
+                                <svg class='h-5 w-5 text-green-500' fill='currentColor' viewBox='0 0 20 20'>
+                                    <path fill-rule='evenodd' d='M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z' clip-rule='evenodd'/>
+                                </svg>
+                            </div>
+                            <div class='ml-3'>
+                                <p class='text-sm font-medium'>Teacher created successfully!</p>
+                                <div class='mt-2 p-3 bg-white rounded border border-green-200'>
+                                    <div class='flex justify-between mb-1'>
+                                        <span class='text-sm font-medium'>Username:</span>
+                                        <span class='text-sm font-mono bg-gray-100 px-2 py-1 rounded'>{$username}</span>
+                                    </div>
+                                    <div class='flex justify-between'>
+                                        <span class='text-sm font-medium'>Password:</span>
+                                        <span class='text-sm font-mono bg-gray-100 px-2 py-1 rounded'>{$password}</span>
+                                    </div>
+                                </div>
+                                <p class='text-xs mt-1'>Please save these credentials and share with the teacher.</p>
+                            </div>
+                        </div>
+                       </div>";
+            } catch (PDOException $e) {
+                $msg = "<div class='bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4 rounded'>
+                        <div class='flex'>
+                            <div class='flex-shrink-0'>
+                                <svg class='h-5 w-5 text-red-500' fill='currentColor' viewBox='0 0 20 20'>
+                                    <path fill-rule='evenodd' d='M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z' clip-rule='evenodd'/>
+                                </svg>
+                            </div>
+                            <div class='ml-3'>
+                                <p class='text-sm font-medium'>Error: " . htmlspecialchars($e->getMessage()) . "</p>
+                            </div>
+                        </div>
+                       </div>";
+            }
+        }
+        
+        elseif ($action == 'create_student') {
+            $first_name = $_POST['first_name'];
+            $last_name = $_POST['last_name'];
+            $email = $_POST['email'];
+            $phone = $_POST['phone'];
+            $address = $_POST['address'] ?? '';
+            $class_id = $_POST['class_id'];
+            $date_of_birth = $_POST['date_of_birth'];
+            $blood_group = $_POST['blood_group'] ?? '';
+            $guardian_name = $_POST['guardian_name'];
+            $guardian_phone = $_POST['guardian_phone'];
+            $guardian_email = $_POST['guardian_email'] ?? '';
+            
+            // Generate student ID and credentials
+            $current_year = date('Y');
+            $student_count = $pdo->query("SELECT COUNT(*) FROM students")->fetchColumn();
+            $student_id = 'STU' . $current_year . str_pad($student_count + 1, 3, '0', STR_PAD_LEFT);
+            $username = 'student' . str_pad($student_count + 1, 3, '0', STR_PAD_LEFT);
+            $password = 'student' . rand(100, 999);
+            $password_hash = password_hash($password, PASSWORD_DEFAULT);
+            
+            try {
+                $pdo->beginTransaction();
+                
+                // Create user account
+                $stmt = $pdo->prepare("INSERT INTO users 
+                                      (username, email, password_hash, first_name, last_name, phone, address, role_id) 
+                                      VALUES (?, ?, ?, ?, ?, ?, ?, 3)");
+                $stmt->execute([$username, $email, $password_hash, $first_name, $last_name, $phone, $address]);
+                $user_id = $pdo->lastInsertId();
+                
+                // Create student record
+                $stmt = $pdo->prepare("INSERT INTO students 
+                                      (user_id, student_id, admission_date, date_of_birth, blood_group, 
+                                       guardian_name, guardian_phone, guardian_email) 
+                                      VALUES (?, ?, CURDATE(), ?, ?, ?, ?, ?)");
+                $stmt->execute([$user_id, $student_id, $date_of_birth, $blood_group, $guardian_name, $guardian_phone, $guardian_email]);
+                $student_db_id = $pdo->lastInsertId();
+                
+                // Get current academic year
+                $stmt = $pdo->query("SELECT id FROM academic_years WHERE is_current = 1");
+                $academic_year_id = $stmt->fetchColumn() ?: 1;
+                
+                // Enroll in class
+                $stmt = $pdo->prepare("INSERT INTO student_enrollments 
+                                      (student_id, class_id, academic_year_id, enrollment_date, status) 
+                                      VALUES (?, ?, ?, CURDATE(), 'enrolled')");
+                $stmt->execute([$student_db_id, $class_id, $academic_year_id]);
+                
+                // Also add to student_classes for compatibility
+                $stmt = $pdo->prepare("INSERT INTO student_classes 
+                                      (student_id, class_id, academic_year_id, enrollment_date, status) 
+                                      VALUES (?, ?, ?, CURDATE(), 'enrolled')");
+                $stmt->execute([$student_db_id, $class_id, $academic_year_id]);
+                
+                $pdo->commit();
+                
+                logActivity($pdo, 'student_created', 'students', $student_db_id);
+                $msg = "<div class='bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mb-4 rounded'>
+                        <div class='flex'>
+                            <div class='flex-shrink-0'>
+                                <svg class='h-5 w-5 text-green-500' fill='currentColor' viewBox='0 0 20 20'>
+                                    <path fill-rule='evenodd' d='M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z' clip-rule='evenodd'/>
+                                </svg>
+                            </div>
+                            <div class='ml-3'>
+                                <p class='text-sm font-medium'>Student created successfully!</p>
+                                <div class='mt-2 p-3 bg-white rounded border border-green-200'>
+                                    <div class='flex justify-between mb-1'>
+                                        <span class='text-sm font-medium'>Student ID:</span>
+                                        <span class='text-sm font-mono bg-gray-100 px-2 py-1 rounded'>{$student_id}</span>
+                                    </div>
+                                    <div class='flex justify-between mb-1'>
+                                        <span class='text-sm font-medium'>Username:</span>
+                                        <span class='text-sm font-mono bg-gray-100 px-2 py-1 rounded'>{$username}</span>
+                                    </div>
+                                    <div class='flex justify-between'>
+                                        <span class='text-sm font-medium'>Password:</span>
+                                        <span class='text-sm font-mono bg-gray-100 px-2 py-1 rounded'>{$password}</span>
+                                    </div>
+                                </div>
+                                <p class='text-xs mt-1'>Please save these credentials and share with the student/guardian.</p>
+                            </div>
+                        </div>
+                       </div>";
+            } catch (PDOException $e) {
+                $pdo->rollBack();
+                $msg = "<div class='bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4 rounded'>
+                        <div class='flex'>
+                            <div class='flex-shrink-0'>
+                                <svg class='h-5 w-5 text-red-500' fill='currentColor' viewBox='0 0 20 20'>
+                                    <path fill-rule='evenodd' d='M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z' clip-rule='evenodd'/>
+                                </svg>
+                            </div>
+                            <div class='ml-3'>
+                                <p class='text-sm font-medium'>Error: " . htmlspecialchars($e->getMessage()) . "</p>
+                            </div>
+                        </div>
+                       </div>";
+            }
+        }
+    }
+}
+
+// Get classes for student creation
+$stmt = $pdo->query("SELECT id, class_name, section FROM classes WHERE is_active = 1 ORDER BY class_level, section");
+$classes = $stmt->fetchAll(PDO::FETCH_ASSOC);
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -19,23 +199,29 @@ include_once '../App/Models/headoffice/User.php';
             <div class="bg-gradient-to-r from-blue-700 to-indigo-800 rounded-xl p-6 text-white shadow-lg mb-6">
                 <h1 class="text-2xl md:text-3xl font-bold mb-2">
                     <i class="fas fa-user-plus mr-3"></i>
-                    Create New Users
+                    Create Users
                 </h1>
                 <p class="text-blue-100">Add new teachers and students to the system</p>
+                
+                <div class="mt-4 flex flex-wrap gap-3">
+                    <a href="manage_users.php" class="inline-flex items-center px-4 py-2 bg-white bg-opacity-20 rounded-lg text-white hover:bg-opacity-30 transition-all">
+                        <i class="fas fa-users mr-2"></i>
+                        Manage Users
+                    </a>
+                </div>
             </div>
 
             <!-- Alert Messages -->
             <?= $msg ?>
 
-            <!-- Action Cards -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                <!-- Create Teacher Card -->
-                <div class="bg-white rounded-xl shadow-sm overflow-hidden">
-                    <div class="bg-gradient-to-r from-green-500 to-green-600 px-6 py-4 text-white">
-                        <h3 class="text-lg font-semibold">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- Create Teacher Form -->
+                <div class="bg-white rounded-xl shadow overflow-hidden">
+                    <div class="bg-gradient-to-r from-green-600 to-green-700 p-5">
+                        <h2 class="text-lg font-bold text-white flex items-center">
                             <i class="fas fa-chalkboard-teacher mr-2"></i>
                             Create New Teacher
-                        </h3>
+                        </h2>
                     </div>
                     <div class="p-6">
                         <form method="post" id="createTeacherForm">
@@ -75,26 +261,21 @@ include_once '../App/Models/headoffice/User.php';
                                 </p>
                             </div>
                             
-                            <div class="flex justify-end">
-                                <a href="manage_users.php" class="bg-grey-300 hover:bg-grey-400 text-grey-800 py-2 px-4 rounded-lg mr-2">
-                                    Cancel
-                                </a>
-                                <button type="submit" class="bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg">
-                                    <i class="fas fa-user-plus mr-2"></i>
-                                    Create Teacher
-                                </button>
-                            </div>
+                            <button type="submit" class="w-full bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg flex items-center justify-center">
+                                <i class="fas fa-user-plus mr-2"></i>
+                                Create Teacher
+                            </button>
                         </form>
                     </div>
                 </div>
 
-                <!-- Create Student Card -->
-                <div class="bg-white rounded-xl shadow-sm overflow-hidden">
-                    <div class="bg-gradient-to-r from-blue-500 to-blue-600 px-6 py-4 text-white">
-                        <h3 class="text-lg font-semibold">
+                <!-- Create Student Form -->
+                <div class="bg-white rounded-xl shadow overflow-hidden">
+                    <div class="bg-gradient-to-r from-blue-600 to-blue-700 p-5">
+                        <h2 class="text-lg font-bold text-white flex items-center">
                             <i class="fas fa-user-graduate mr-2"></i>
                             Create New Student
-                        </h3>
+                        </h2>
                     </div>
                     <div class="p-6">
                         <form method="post" id="createStudentForm">
@@ -185,75 +366,14 @@ include_once '../App/Models/headoffice/User.php';
                                 </p>
                             </div>
                             
-                            <div class="flex justify-end">
-                                <a href="manage_users.php" class="bg-grey-300 hover:bg-grey-400 text-grey-800 py-2 px-4 rounded-lg mr-2">
-                                    Cancel
-                                </a>
-                                <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg">
-                                    <i class="fas fa-user-graduate mr-2"></i>
-                                    Create Student
-                                </button>
-                            </div>
+                            <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg flex items-center justify-center">
+                                <i class="fas fa-user-graduate mr-2"></i>
+                                Create Student
+                            </button>
                         </form>
                     </div>
                 </div>
             </div>
-
-            <!-- Credentials Display -->
-            <?php if (isset($new_credentials)): ?>
-            <div class="bg-white rounded-xl shadow-sm overflow-hidden mb-6">
-                <div class="bg-gradient-to-r from-green-500 to-green-600 px-6 py-4 text-white">
-                    <h3 class="text-lg font-semibold">
-                        <i class="fas fa-key mr-2"></i>
-                        New User Credentials
-                    </h3>
-                </div>
-                <div class="p-6">
-                    <div class="bg-green-50 p-4 rounded-lg mb-4">
-                        <div class="flex items-center mb-3">
-                            <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center text-green-600 mr-4">
-                                <i class="fas fa-check-circle text-xl"></i>
-                            </div>
-                            <div>
-                                <h4 class="text-lg font-semibold text-green-800">User Created Successfully!</h4>
-                                <p class="text-green-700">Please save these credentials and share with the user.</p>
-                            </div>
-                        </div>
-                        
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <?php if (isset($new_credentials['student_id'])): ?>
-                            <div class="bg-white p-3 rounded-lg border border-green-200">
-                                <div class="text-sm font-medium text-grey-500 mb-1">Student ID</div>
-                                <div class="text-lg font-mono bg-grey-100 p-2 rounded"><?= $new_credentials['student_id'] ?></div>
-                            </div>
-                            <?php endif; ?>
-                            
-                            <div class="bg-white p-3 rounded-lg border border-green-200">
-                                <div class="text-sm font-medium text-grey-500 mb-1">Username</div>
-                                <div class="text-lg font-mono bg-grey-100 p-2 rounded"><?= $new_credentials['username'] ?></div>
-                            </div>
-                            
-                            <div class="bg-white p-3 rounded-lg border border-green-200">
-                                <div class="text-sm font-medium text-grey-500 mb-1">Password</div>
-                                <div class="text-lg font-mono bg-grey-100 p-2 rounded"><?= $new_credentials['password'] ?></div>
-                            </div>
-                            
-                            <div class="bg-white p-3 rounded-lg border border-green-200">
-                                <div class="text-sm font-medium text-grey-500 mb-1">Full Name</div>
-                                <div class="text-lg p-2"><?= htmlspecialchars($new_credentials['first_name'] . ' ' . $new_credentials['last_name']) ?></div>
-                            </div>
-                        </div>
-                        
-                        <div class="mt-4 flex justify-end">
-                            <a href="manage_users.php" class="bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg">
-                                <i class="fas fa-users mr-2"></i>
-                                Go to User Management
-                            </a>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <?php endif; ?>
         </div>
     </main>
 
