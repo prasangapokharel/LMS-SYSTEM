@@ -1,337 +1,34 @@
-<?php 
-// Include necessary files
-include_once '../App/Models/headoffice/Index.php';
-?>
+<?php
+include_once '../App/Models/headoffice/Leavedetails.php';
 
+// The rest of the PHP logic is handled by the Leavedetails model
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Leave Details - School LMS</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <style>
-        :root {
-            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            --success-gradient: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
-            --warning-gradient: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-            --info-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-            --danger-gradient: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
-        }
-
-        a {
-            text-decoration: none;
-        }
-
-        body {
-            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            min-height: 100vh;
-        }
-
-        .main-content {
-            margin-left: 250px;
-            padding: 2rem;
-            min-height: 100vh;
-            max-width: calc(100vw - 250px);
-            overflow-x: hidden;
-        }
-
-        @media (max-width: 768px) {
-            .main-content {
-                margin-left: 0;
-                padding: 1rem;
-                max-width: 100vw;
-            }
-        }
-
-        .page-header {
-            background: var(--primary-gradient);
-            color: white;
-            padding: 2rem;
-            border-radius: 20px;
-            margin-bottom: 2rem;
-            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
-        }
-
-        .page-title {
-            font-size: 2.5rem;
-            font-weight: 700;
-            margin: 0;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-
-        .page-subtitle {
-            font-size: 1.1rem;
-            opacity: 0.9;
-            margin: 0.5rem 0 0 0;
-        }
-
-        .modern-card {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            border-radius: 20px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            overflow: hidden;
-            margin-bottom: 2rem;
-        }
-
-        .card-header-modern {
-            background: var(--primary-gradient);
-            color: white;
-            padding: 1.5rem;
-            border: none;
-        }
-
-        .card-header-modern h5 {
-            margin: 0;
-            font-weight: 600;
-        }
-
-        .btn-modern {
-            border-radius: 12px;
-            padding: 0.75rem 1.5rem;
-            font-weight: 600;
-            border: none;
-            transition: all 0.3s ease;
-            text-decoration: none;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .btn-primary-modern {
-            background: var(--primary-gradient);
-            color: white;
-        }
-
-        .btn-success-modern {
-            background: var(--success-gradient);
-            color: white;
-        }
-
-        .btn-danger-modern {
-            background: var(--danger-gradient);
-            color: white;
-        }
-
-        .btn-info-modern {
-            background: var(--info-gradient);
-            color: white;
-        }
-
-        .btn-modern:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
-            color: white;
-        }
-
-        .badge-modern {
-            padding: 0.5rem 1rem;
-            border-radius: 20px;
-            font-weight: 600;
-            font-size: 0.875rem;
-        }
-
-        .badge-status-pending {
-            background: var(--warning-gradient);
-            color: white;
-        }
-
-        .badge-status-approved {
-            background: var(--success-gradient);
-            color: white;
-        }
-
-        .badge-status-rejected {
-            background: var(--danger-gradient);
-            color: white;
-        }
-
-        .badge-type-student {
-            background: var(--info-gradient);
-            color: white;
-        }
-
-        .badge-type-teacher {
-            background: var(--success-gradient);
-            color: white;
-        }
-
-        .alert-modern {
-            border-radius: 16px;
-            border: none;
-            padding: 1.5rem;
-            margin-bottom: 2rem;
-            display: flex;
-            align-items: flex-start;
-            gap: 1rem;
-        }
-
-        .alert-icon {
-            font-size: 1.5rem;
-            flex-shrink: 0;
-        }
-
-        .user-info-card {
-            background: rgba(255, 255, 255, 0.9);
-            border-radius: 16px;
-            padding: 2rem;
-            margin-bottom: 2rem;
-            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
-        }
-
-        .user-avatar {
-            width: 80px;
-            height: 80px;
-            border-radius: 50%;
-            background: var(--primary-gradient);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-weight: 600;
-            font-size: 2rem;
-            margin-bottom: 1rem;
-        }
-
-        .detail-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 1.5rem;
-            margin-bottom: 2rem;
-        }
-
-        .detail-item {
-            background: rgba(255, 255, 255, 0.7);
-            padding: 1.5rem;
-            border-radius: 12px;
-            border-left: 4px solid;
-        }
-
-        .detail-item.primary { border-left-color: #667eea; }
-        .detail-item.success { border-left-color: #11998e; }
-        .detail-item.warning { border-left-color: #f093fb; }
-        .detail-item.info { border-left-color: #4facfe; }
-
-        .detail-label {
-            font-size: 0.875rem;
-            color: #718096;
-            font-weight: 500;
-            margin-bottom: 0.5rem;
-        }
-
-        .detail-value {
-            font-weight: 600;
-            color: #2d3748;
-            font-size: 1.1rem;
-        }
-
-        .timeline {
-            position: relative;
-            padding-left: 2rem;
-        }
-
-        .timeline::before {
-            content: '';
-            position: absolute;
-            left: 0.5rem;
-            top: 0;
-            bottom: 0;
-            width: 2px;
-            background: var(--primary-gradient);
-        }
-
-        .timeline-item {
-            position: relative;
-            margin-bottom: 2rem;
-            background: rgba(255, 255, 255, 0.9);
-            padding: 1.5rem;
-            border-radius: 12px;
-            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
-        }
-
-        .timeline-item::before {
-            content: '';
-            position: absolute;
-            left: -2.25rem;
-            top: 1.5rem;
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            background: var(--primary-gradient);
-        }
-
-        .form-control-modern {
-            border-radius: 12px;
-            border: 2px solid #e2e8f0;
-            padding: 0.75rem 1rem;
-            transition: all 0.3s ease;
-        }
-
-        .form-control-modern:focus {
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-        }
-
-        .modal-modern .modal-content {
-            border-radius: 20px;
-            border: none;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
-        }
-
-        .modal-modern .modal-header {
-            background: var(--primary-gradient);
-            color: white;
-            border-radius: 20px 20px 0 0;
-            border: none;
-        }
-
-        .attachment-preview {
-            background: rgba(255, 255, 255, 0.9);
-            border-radius: 12px;
-            padding: 1rem;
-            text-align: center;
-            border: 2px dashed #e2e8f0;
-        }
-
-        .attachment-preview img {
-            max-width: 100%;
-            max-height: 200px;
-            border-radius: 8px;
-        }
-
-        @media (max-width: 768px) {
-            .page-title {
-                font-size: 2rem;
-            }
-            
-            .detail-grid {
-                grid-template-columns: 1fr;
-            }
-            
-            .user-avatar {
-                width: 60px;
-                height: 60px;
-                font-size: 1.5rem;
-            }
-        }
-    </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="../assets/css/ui.css">
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body>
-    <div class="d-flex">
-        <div class="main-content">
+<body class="bg-gray-50">
+    <div class="flex">
+        <!-- Main Content -->
+        <main class="flex-1 p-4 lg:p-8 ml-0 lg:ml-64">
             <!-- Page Header -->
-            <div class="page-header">
-                <div class="d-flex justify-content-between align-items-center">
+            <div class="bg-gradient-to-r from-blue-600 to-blue-700 rounded-xl p-6 text-white shadow-lg mb-6">
+                <div class="flex flex-col md:flex-row md:items-center md:justify-between">
                     <div>
-                        <h1 class="page-title">Leave Application Details</h1>
-                        <p class="page-subtitle">Review detailed information about this leave request</p>
+                        <h1 class="text-2xl md:text-3xl font-bold mb-2">
+                            <i class="fas fa-file-alt mr-3"></i>
+                            Leave Application Details
+                        </h1>
+                        <p class="text-blue-100">Review detailed information about this leave request</p>
                     </div>
-                    <a href="leave_management.php" class="btn btn-light btn-modern">
-                        <i class="fas fa-arrow-left"></i>
+                    <a href="leave_management.php" class="btn btn2 mt-4 md:mt-0">
+                        <i class="fas fa-arrow-left mr-2"></i>
                         Back to Leave Management
                     </a>
                 </div>
@@ -341,130 +38,165 @@ include_once '../App/Models/headoffice/Index.php';
             <?= $msg ?>
 
             <!-- User Information Card -->
-            <div class="user-info-card">
-                <div class="row align-items-center">
-                    <div class="col-md-2 text-center">
-                        <div class="user-avatar mx-auto">
+            <div class="bg-white rounded-xl shadow-lg p-6 mb-6 border-l-4 <?= $leave['status'] == 'pending' ? 'border-yellow-400' : ($leave['status'] == 'approved' ? 'border-green-400' : 'border-red-400') ?>">
+                <div class="flex flex-col md:flex-row md:items-center md:justify-between">
+                    <div class="flex items-center space-x-4 mb-4 md:mb-0">
+                        <div class="w-16 h-16 rounded-full bg-gradient-to-br <?= $leave['status'] == 'pending' ? 'from-yellow-400 to-orange-500' : ($leave['status'] == 'approved' ? 'from-green-400 to-emerald-600' : 'from-red-400 to-rose-600') ?> flex items-center justify-center text-white font-bold text-xl shadow-lg">
                             <?= strtoupper(substr($leave['first_name'], 0, 1) . substr($leave['last_name'], 0, 1)) ?>
                         </div>
-                    </div>
-                    <div class="col-md-6">
-                        <h4 class="mb-2"><?= htmlspecialchars($leave['first_name'] . ' ' . $leave['last_name']) ?></h4>
-                        <div class="d-flex gap-2 mb-2">
-                            <span class="badge badge-modern badge-type-<?= $leave['user_type'] ?>">
-                                <?= htmlspecialchars(ucfirst($leave['user_type'])) ?>
-                            </span>
-                            <span class="badge badge-modern badge-status-<?= $leave['status'] ?>">
-                                <?= htmlspecialchars(ucfirst($leave['status'])) ?>
-                            </span>
+                        <div>
+                            <h3 class="text-xl font-bold text-gray-800 mb-2"><?= htmlspecialchars($leave['first_name'] . ' ' . $leave['last_name']) ?></h3>
+                            <div class="flex flex-wrap gap-2 mb-3">
+                                <span class="px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800 border border-blue-200">
+                                    <i class="fas <?= $leave['user_type'] == 'student' ? 'fa-user-graduate' : 'fa-chalkboard-teacher' ?> mr-1"></i>
+                                    <?= htmlspecialchars(ucfirst($leave['user_type'])) ?>
+                                </span>
+                                <span class="px-3 py-1 rounded-full text-sm font-bold <?= $leave['status'] == 'pending' ? 'bg-yellow-100 text-yellow-800 border border-yellow-300' : ($leave['status'] == 'approved' ? 'bg-green-100 text-green-800 border border-green-300' : 'bg-red-100 text-red-800 border border-red-300') ?>">
+                                    <i class="fas <?= $leave['status'] == 'pending' ? 'fa-clock' : ($leave['status'] == 'approved' ? 'fa-check' : 'fa-times') ?> mr-1"></i>
+                                    <?= htmlspecialchars(ucfirst($leave['status'])) ?>
+                                </span>
+                            </div>
+                            <div class="space-y-1 text-sm text-gray-600">
+                                <p class="flex items-center">
+                                    <i class="fas fa-envelope mr-2 text-blue-500"></i>
+                                    <?= htmlspecialchars($leave['email']) ?>
+                                </p>
+                                <?php if ($leave['phone']): ?>
+                                <p class="flex items-center">
+                                    <i class="fas fa-phone mr-2 text-green-500"></i>
+                                    <?= htmlspecialchars($leave['phone']) ?>
+                                </p>
+                                <?php endif; ?>
+                                <?php if ($leave['user_type'] == 'student'): ?>
+                                <p class="flex items-center">
+                                    <i class="fas fa-id-card mr-2 text-purple-500"></i>
+                                    Student ID: <?= htmlspecialchars($leave['identifier']) ?>
+                                    <?php if ($leave['class_name']): ?>
+                                    | Class: <?= htmlspecialchars($leave['class_name']) ?>
+                                    <?php endif; ?>
+                                </p>
+                                <?php endif; ?>
+                            </div>
                         </div>
-                        <p class="text-muted mb-1">
-                            <i class="fas fa-envelope me-2"></i>
-                            <?= htmlspecialchars($leave['email']) ?>
-                        </p>
-                        <?php if ($leave['phone']): ?>
-                        <p class="text-muted mb-1">
-                            <i class="fas fa-phone me-2"></i>
-                            <?= htmlspecialchars($leave['phone']) ?>
-                        </p>
-                        <?php endif; ?>
-                        <?php if ($leave['user_type'] == 'student'): ?>
-                        <p class="text-muted mb-0">
-                            <i class="fas fa-id-card me-2"></i>
-                            Student ID: <?= htmlspecialchars($leave['identifier']) ?>
-                            <?php if ($leave['class_name']): ?>
-                            | Class: <?= htmlspecialchars($leave['class_name']) ?>
-                            <?php endif; ?>
-                        </p>
-                        <?php endif; ?>
                     </div>
-                    <div class="col-md-4 text-end">
-                        <?php if ($leave['status'] == 'pending'): ?>
-                        <button type="button" class="btn btn-success-modern btn-modern me-2" 
-                                data-bs-toggle="modal" 
-                                data-bs-target="#approveModal">
-                            <i class="fas fa-check"></i>
+                    <?php if ($leave['status'] == 'pending'): ?>
+                    <div class="flex flex-col sm:flex-row gap-3">
+                        <button type="button" onclick="openApproveModal()" class="btn btn3">
+                            <i class="fas fa-check mr-2"></i>
                             Approve
                         </button>
-                        <button type="button" class="btn btn-danger-modern btn-modern" 
-                                data-bs-toggle="modal" 
-                                data-bs-target="#rejectModal">
-                            <i class="fas fa-times"></i>
+                        <button type="button" onclick="openRejectModal()" class="btn" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white;">
+                            <i class="fas fa-times mr-2"></i>
                             Reject
                         </button>
-                        <?php endif; ?>
                     </div>
+                    <?php endif; ?>
                 </div>
             </div>
 
             <!-- Leave Details -->
-            <div class="modern-card">
-                <div class="card-header-modern">
-                    <h5>Leave Application Information</h5>
+            <div class="bg-white rounded-xl shadow-lg overflow-hidden mb-6">
+                <div class="bg-gradient-to-r from-indigo-600 to-indigo-700 p-5">
+                    <h2 class="text-lg font-bold text-white flex items-center">
+                        <i class="fas fa-info-circle mr-2"></i>
+                        Leave Application Information
+                    </h2>
                 </div>
-                <div class="card-body">
-                    <div class="detail-grid">
-                        <div class="detail-item primary">
-                            <div class="detail-label">Leave Type</div>
-                            <div class="detail-value"><?= htmlspecialchars(ucfirst($leave['leave_type'])) ?></div>
+                <div class="p-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+                        <div class="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                            <div class="flex items-center mb-2">
+                                <i class="fas fa-tag text-blue-600 mr-2"></i>
+                                <span class="text-sm font-medium text-blue-700">Leave Type</span>
+                            </div>
+                            <p class="text-lg font-bold text-blue-800"><?= htmlspecialchars(ucfirst($leave['leave_type'])) ?></p>
                         </div>
-                        <div class="detail-item info">
-                            <div class="detail-label">From Date</div>
-                            <div class="detail-value"><?= htmlspecialchars(date('M d, Y', strtotime($leave['from_date']))) ?></div>
+                        
+                        <div class="bg-green-50 rounded-lg p-4 border border-green-200">
+                            <div class="flex items-center mb-2">
+                                <i class="fas fa-calendar-day text-green-600 mr-2"></i>
+                                <span class="text-sm font-medium text-green-700">From Date</span>
+                            </div>
+                            <p class="text-lg font-bold text-green-800"><?= htmlspecialchars(date('M d, Y', strtotime($leave['from_date']))) ?></p>
                         </div>
-                        <div class="detail-item info">
-                            <div class="detail-label">To Date</div>
-                            <div class="detail-value"><?= htmlspecialchars(date('M d, Y', strtotime($leave['to_date']))) ?></div>
+                        
+                        <div class="bg-green-50 rounded-lg p-4 border border-green-200">
+                            <div class="flex items-center mb-2">
+                                <i class="fas fa-calendar-day text-green-600 mr-2"></i>
+                                <span class="text-sm font-medium text-green-700">To Date</span>
+                            </div>
+                            <p class="text-lg font-bold text-green-800"><?= htmlspecialchars(date('M d, Y', strtotime($leave['to_date']))) ?></p>
                         </div>
-                        <div class="detail-item warning">
-                            <div class="detail-label">Total Days</div>
-                            <div class="detail-value"><?= $duration ?> days</div>
+                        
+                        <div class="bg-yellow-50 rounded-lg p-4 border border-yellow-200">
+                            <div class="flex items-center mb-2">
+                                <i class="fas fa-clock text-yellow-600 mr-2"></i>
+                                <span class="text-sm font-medium text-yellow-700">Total Days</span>
+                            </div>
+                            <p class="text-lg font-bold text-yellow-800"><?= $duration ?> days</p>
                         </div>
-                        <div class="detail-item success">
-                            <div class="detail-label">Applied Date</div>
-                            <div class="detail-value"><?= htmlspecialchars(date('M d, Y g:i A', strtotime($leave['applied_date']))) ?></div>
+                        
+                        <div class="bg-purple-50 rounded-lg p-4 border border-purple-200">
+                            <div class="flex items-center mb-2">
+                                <i class="fas fa-calendar-plus text-purple-600 mr-2"></i>
+                                <span class="text-sm font-medium text-purple-700">Applied Date</span>
+                            </div>
+                            <p class="text-lg font-bold text-purple-800"><?= htmlspecialchars(date('M d, Y', strtotime($leave['applied_date']))) ?></p>
+                            <p class="text-sm text-purple-600"><?= htmlspecialchars(date('g:i A', strtotime($leave['applied_date']))) ?></p>
                         </div>
+                        
                         <?php if ($leave['emergency_contact']): ?>
-                        <div class="detail-item primary">
-                            <div class="detail-label">Emergency Contact</div>
-                            <div class="detail-value"><?= htmlspecialchars($leave['emergency_contact']) ?></div>
+                        <div class="bg-red-50 rounded-lg p-4 border border-red-200">
+                            <div class="flex items-center mb-2">
+                                <i class="fas fa-phone-alt text-red-600 mr-2"></i>
+                                <span class="text-sm font-medium text-red-700">Emergency Contact</span>
+                            </div>
+                            <p class="text-lg font-bold text-red-800"><?= htmlspecialchars($leave['emergency_contact']) ?></p>
                         </div>
                         <?php endif; ?>
                     </div>
 
                     <?php if ($leave['reason']): ?>
-                    <div class="detail-item primary mb-3">
-                        <div class="detail-label">Reason for Leave</div>
-                        <div class="detail-value"><?= nl2br(htmlspecialchars($leave['reason'])) ?></div>
+                    <div class="bg-gray-50 rounded-lg p-4 border border-gray-200 mb-6">
+                        <div class="flex items-center mb-3">
+                            <i class="fas fa-comment-alt text-gray-600 mr-2"></i>
+                            <span class="text-sm font-medium text-gray-700">Reason for Leave</span>
+                        </div>
+                        <p class="text-gray-800 leading-relaxed"><?= nl2br(htmlspecialchars($leave['reason'])) ?></p>
                     </div>
                     <?php endif; ?>
 
                     <?php if ($leave['leave_details']): ?>
-                    <div class="detail-item info mb-3">
-                        <div class="detail-label">Additional Details</div>
-                        <div class="detail-value"><?= nl2br(htmlspecialchars($leave['leave_details'])) ?></div>
+                    <div class="bg-blue-50 rounded-lg p-4 border border-blue-200 mb-6">
+                        <div class="flex items-center mb-3">
+                            <i class="fas fa-info-circle text-blue-600 mr-2"></i>
+                            <span class="text-sm font-medium text-blue-700">Additional Details</span>
+                        </div>
+                        <p class="text-blue-800 leading-relaxed"><?= nl2br(htmlspecialchars($leave['leave_details'])) ?></p>
                     </div>
                     <?php endif; ?>
 
                     <?php if ($leave['attachment_url']): ?>
-                    <div class="detail-item warning">
-                        <div class="detail-label">Attachment</div>
-                        <div class="detail-value">
-                            <div class="attachment-preview">
-                                <?php 
-                                $file_extension = strtolower(pathinfo($leave['attachment_url'], PATHINFO_EXTENSION));
-                                if (in_array($file_extension, ['jpg', 'jpeg', 'png', 'gif'])): 
-                                ?>
-                                <img src="../<?= htmlspecialchars($leave['attachment_url']) ?>" alt="Leave attachment" class="mb-2">
-                                <br>
-                                <?php endif; ?>
-                                <a href="../<?= htmlspecialchars($leave['attachment_url']) ?>" 
-                                   class="btn btn-info-modern btn-modern btn-sm" 
-                                   target="_blank">
-                                    <i class="fas fa-download"></i>
-                                    Download Attachment
-                                </a>
+                    <div class="bg-yellow-50 rounded-lg p-4 border border-yellow-200">
+                        <div class="flex items-center mb-3">
+                            <i class="fas fa-paperclip text-yellow-600 mr-2"></i>
+                            <span class="text-sm font-medium text-yellow-700">Attachment</span>
+                        </div>
+                        <div class="attachment-preview">
+                            <?php 
+                            $file_extension = strtolower(pathinfo($leave['attachment_url'], PATHINFO_EXTENSION));
+                            if (in_array($file_extension, ['jpg', 'jpeg', 'png', 'gif'])): 
+                            ?>
+                            <div class="mb-4">
+                                <img src="../<?= htmlspecialchars($leave['attachment_url']) ?>" alt="Leave attachment" class="max-w-full h-auto rounded-lg shadow-md border border-gray-200" style="max-height: 300px;">
                             </div>
+                            <?php endif; ?>
+                            <a href="../<?= htmlspecialchars($leave['attachment_url']) ?>" 
+                               class="btn btn1 btn-sm" 
+                               target="_blank">
+                                <i class="fas fa-download mr-2"></i>
+                                Download Attachment
+                            </a>
                         </div>
                     </div>
                     <?php endif; ?>
@@ -473,78 +205,114 @@ include_once '../App/Models/headoffice/Index.php';
 
             <!-- Approval History -->
             <?php if ($leave['status'] != 'pending'): ?>
-            <div class="modern-card">
-                <div class="card-header-modern">
-                    <h5>Approval History</h5>
+            <div class="bg-white rounded-xl shadow-lg overflow-hidden">
+                <div class="bg-gradient-to-r from-green-600 to-green-700 p-5">
+                    <h2 class="text-lg font-bold text-white flex items-center">
+                        <i class="fas fa-history mr-2"></i>
+                        Approval History
+                    </h2>
                 </div>
-                <div class="card-body">
-                    <div class="timeline">
-                        <div class="timeline-item">
-                            <h6 class="mb-2">Application Submitted</h6>
-                            <p class="text-muted mb-1">
-                                <i class="fas fa-calendar me-2"></i>
-                                <?= htmlspecialchars(date('M d, Y g:i A', strtotime($leave['applied_date']))) ?>
-                            </p>
-                            <p class="mb-0">Leave application submitted by <?= htmlspecialchars($leave['first_name'] . ' ' . $leave['last_name']) ?></p>
+                <div class="p-6">
+                    <div class="relative">
+                        <!-- Timeline line -->
+                        <div class="absolute left-8 top-0 bottom-0 w-0.5 bg-gray-300"></div>
+                        
+                        <!-- Application Submitted -->
+                        <div class="relative flex items-start mb-8">
+                            <div class="flex-shrink-0 w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center border-4 border-white shadow-lg">
+                                <i class="fas fa-paper-plane text-blue-600 text-xl"></i>
+                            </div>
+                            <div class="ml-6 flex-1">
+                                <div class="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                                    <h3 class="text-lg font-bold text-blue-800 mb-2">Application Submitted</h3>
+                                    <p class="text-blue-700 mb-2 flex items-center">
+                                        <i class="fas fa-calendar mr-2"></i>
+                                        <?= htmlspecialchars(date('M d, Y g:i A', strtotime($leave['applied_date']))) ?>
+                                    </p>
+                                    <p class="text-blue-600">Leave application submitted by <?= htmlspecialchars($leave['first_name'] . ' ' . $leave['last_name']) ?></p>
+                                </div>
+                            </div>
                         </div>
                         
-                        <div class="timeline-item">
-                            <h6 class="mb-2">
-                                Application <?= $leave['status'] == 'approved' ? 'Approved' : 'Rejected' ?>
-                            </h6>
-                            <?php if ($leave['approved_date']): ?>
-                            <p class="text-muted mb-1">
-                                <i class="fas fa-calendar me-2"></i>
-                                <?= htmlspecialchars(date('M d, Y g:i A', strtotime($leave['approved_date']))) ?>
-                            </p>
-                            <?php endif; ?>
-                            <?php if ($leave['approver_first_name']): ?>
-                            <p class="mb-2">
-                                <?= $leave['status'] == 'approved' ? 'Approved' : 'Rejected' ?> by 
-                                <strong><?= htmlspecialchars($leave['approver_first_name'] . ' ' . $leave['approver_last_name']) ?></strong>
-                            </p>
-                            <?php endif; ?>
-                            <?php if ($leave['rejection_reason']): ?>
-                            <div class="alert alert-light">
-                                <strong><?= $leave['status'] == 'approved' ? 'Remarks:' : 'Rejection Reason:' ?></strong><br>
-                                <?= nl2br(htmlspecialchars($leave['rejection_reason'])) ?>
+                        <!-- Application Decision -->
+                        <div class="relative flex items-start">
+                            <div class="flex-shrink-0 w-16 h-16 <?= $leave['status'] == 'approved' ? 'bg-green-100' : 'bg-red-100' ?> rounded-full flex items-center justify-center border-4 border-white shadow-lg">
+                                <i class="fas <?= $leave['status'] == 'approved' ? 'fa-check text-green-600' : 'fa-times text-red-600' ?> text-xl"></i>
                             </div>
-                            <?php endif; ?>
+                            <div class="ml-6 flex-1">
+                                <div class="<?= $leave['status'] == 'approved' ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200' ?> rounded-lg p-4 border">
+                                    <h3 class="text-lg font-bold <?= $leave['status'] == 'approved' ? 'text-green-800' : 'text-red-800' ?> mb-2">
+                                        Application <?= $leave['status'] == 'approved' ? 'Approved' : 'Rejected' ?>
+                                    </h3>
+                                    <?php if ($leave['approved_date']): ?>
+                                    <p class="<?= $leave['status'] == 'approved' ? 'text-green-700' : 'text-red-700' ?> mb-2 flex items-center">
+                                        <i class="fas fa-calendar mr-2"></i>
+                                        <?= htmlspecialchars(date('M d, Y g:i A', strtotime($leave['approved_date']))) ?>
+                                    </p>
+                                    <?php endif; ?>
+                                    <?php if ($leave['approver_first_name']): ?>
+                                    <p class="<?= $leave['status'] == 'approved' ? 'text-green-600' : 'text-red-600' ?> mb-3">
+                                        <?= $leave['status'] == 'approved' ? 'Approved' : 'Rejected' ?> by 
+                                        <strong><?= htmlspecialchars($leave['approver_first_name'] . ' ' . $leave['approver_last_name']) ?></strong>
+                                    </p>
+                                    <?php endif; ?>
+                                    <?php if ($leave['rejection_reason']): ?>
+                                    <div class="<?= $leave['status'] == 'approved' ? 'bg-green-100 border-green-300' : 'bg-red-100 border-red-300' ?> rounded-lg p-3 border">
+                                        <strong class="<?= $leave['status'] == 'approved' ? 'text-green-800' : 'text-red-800' ?>">
+                                            <?= $leave['status'] == 'approved' ? 'Remarks:' : 'Rejection Reason:' ?>
+                                        </strong>
+                                        <p class="<?= $leave['status'] == 'approved' ? 'text-green-700' : 'text-red-700' ?> mt-1 leading-relaxed">
+                                            <?= nl2br(htmlspecialchars($leave['rejection_reason'])) ?>
+                                        </p>
+                                    </div>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
             <?php endif; ?>
-        </div>
+        </main>
     </div>
 
     <!-- Approve Modal -->
-    <div class="modal fade modal-modern" id="approveModal" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">
-                        <i class="fas fa-check-circle me-2"></i>
+    <div id="approveModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 transition-opacity duration-300">
+        <div class="bg-white rounded-xl shadow-2xl max-w-md w-full mx-4 transform transition-all duration-300 scale-95" id="approveModalContent">
+            <div class="bg-gradient-to-r from-green-500 to-green-600 text-white p-6 rounded-t-xl">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-lg font-semibold">
+                        <i class="fas fa-check-circle mr-2"></i>
                         Approve Leave Application
-                    </h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </h3>
+                    <button onclick="closeApproveModal()" class="text-white hover:text-gray-200 transition-colors">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
                 </div>
-                <form method="post">
-                    <div class="modal-body">
-                        <input type="hidden" name="action" value="approve">
-                        <div class="text-center mb-3">
-                            <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
-                            <p>Are you sure you want to approve this leave application for <strong><?= htmlspecialchars($leave['first_name'] . ' ' . $leave['last_name']) ?></strong>?</p>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Remarks (Optional)</label>
-                            <textarea name="remarks" class="form-control form-control-modern" rows="3" placeholder="Add any remarks or conditions..."></textarea>
-                        </div>
+            </div>
+            <div class="p-6">
+                <div class="text-center mb-6">
+                    <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <i class="fas fa-check-circle text-green-600 text-2xl"></i>
                     </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-success-modern btn-modern">
-                            <i class="fas fa-check"></i>
+                    <p class="text-gray-700 mb-2">Are you sure you want to approve this leave application for</p>
+                    <p class="font-semibold text-gray-900"><?= htmlspecialchars($leave['first_name'] . ' ' . $leave['last_name']) ?></p>
+                </div>
+                
+                <form method="post" id="approveForm">
+                    <input type="hidden" name="action" value="approve">
+                    
+                    <div class="mb-4">
+                        <label class="form-label">Remarks (Optional)</label>
+                        <textarea name="remarks" class="form-input" rows="3" placeholder="Add any remarks or conditions..."></textarea>
+                    </div>
+                    
+                    <div class="flex space-x-3">
+                        <button type="button" onclick="closeApproveModal()" class="btn btn2 flex-1">
+                            Cancel
+                        </button>
+                        <button type="submit" class="btn btn3 flex-1">
+                            <i class="fas fa-check mr-2"></i>
                             Approve Application
                         </button>
                     </div>
@@ -554,32 +322,42 @@ include_once '../App/Models/headoffice/Index.php';
     </div>
 
     <!-- Reject Modal -->
-    <div class="modal fade modal-modern" id="rejectModal" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">
-                        <i class="fas fa-times-circle me-2"></i>
+    <div id="rejectModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 transition-opacity duration-300">
+        <div class="bg-white rounded-xl shadow-2xl max-w-md w-full mx-4 transform transition-all duration-300 scale-95" id="rejectModalContent">
+            <div class="bg-gradient-to-r from-red-500 to-red-600 text-white p-6 rounded-t-xl">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-lg font-semibold">
+                        <i class="fas fa-times-circle mr-2"></i>
                         Reject Leave Application
-                    </h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </h3>
+                    <button onclick="closeRejectModal()" class="text-white hover:text-gray-200 transition-colors">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
                 </div>
-                <form method="post">
-                    <div class="modal-body">
-                        <input type="hidden" name="action" value="reject">
-                        <div class="text-center mb-3">
-                            <i class="fas fa-times-circle fa-3x text-danger mb-3"></i>
-                            <p>Are you sure you want to reject this leave application for <strong><?= htmlspecialchars($leave['first_name'] . ' ' . $leave['last_name']) ?></strong>?</p>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Reason for Rejection <span class="text-danger">*</span></label>
-                            <textarea name="remarks" class="form-control form-control-modern" rows="3" required placeholder="Please provide a reason for rejection..."></textarea>
-                        </div>
+            </div>
+            <div class="p-6">
+                <div class="text-center mb-6">
+                    <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <i class="fas fa-times-circle text-red-600 text-2xl"></i>
                     </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-danger-modern btn-modern">
-                            <i class="fas fa-times"></i>
+                    <p class="text-gray-700 mb-2">Are you sure you want to reject this leave application for</p>
+                    <p class="font-semibold text-gray-900"><?= htmlspecialchars($leave['first_name'] . ' ' . $leave['last_name']) ?></p>
+                </div>
+                
+                <form method="post" id="rejectForm">
+                    <input type="hidden" name="action" value="reject">
+                    
+                    <div class="mb-4">
+                        <label class="form-label">Reason for Rejection <span class="text-red-500">*</span></label>
+                        <textarea name="remarks" class="form-input" rows="3" required placeholder="Please provide a reason for rejection..."></textarea>
+                    </div>
+                    
+                    <div class="flex space-x-3">
+                        <button type="button" onclick="closeRejectModal()" class="btn btn2 flex-1">
+                            Cancel
+                        </button>
+                        <button type="submit" class="btn flex-1" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white;">
+                            <i class="fas fa-times mr-2"></i>
                             Reject Application
                         </button>
                     </div>
@@ -588,6 +366,108 @@ include_once '../App/Models/headoffice/Index.php';
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Include sidebar -->
+    <?php include '../include/sidebar.php'; ?>
+
+    <script>
+        // Modal functionality
+        function openApproveModal() {
+            const modal = document.getElementById('approveModal');
+            const content = document.getElementById('approveModalContent');
+            
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            
+            setTimeout(() => {
+                modal.classList.add('opacity-100');
+                content.classList.remove('scale-95');
+                content.classList.add('scale-100');
+            }, 10);
+        }
+
+        function closeApproveModal() {
+            const modal = document.getElementById('approveModal');
+            const content = document.getElementById('approveModalContent');
+            
+            modal.classList.remove('opacity-100');
+            content.classList.remove('scale-100');
+            content.classList.add('scale-95');
+            
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+                // Reset form
+                document.getElementById('approveForm').reset();
+            }, 300);
+        }
+
+        function openRejectModal() {
+            const modal = document.getElementById('rejectModal');
+            const content = document.getElementById('rejectModalContent');
+            
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            
+            setTimeout(() => {
+                modal.classList.add('opacity-100');
+                content.classList.remove('scale-95');
+                content.classList.add('scale-100');
+            }, 10);
+        }
+
+        function closeRejectModal() {
+            const modal = document.getElementById('rejectModal');
+            const content = document.getElementById('rejectModalContent');
+            
+            modal.classList.remove('opacity-100');
+            content.classList.remove('scale-100');
+            content.classList.add('scale-95');
+            
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+                // Reset form
+                document.getElementById('rejectForm').reset();
+            }, 300);
+        }
+
+        // Close modals when clicking outside
+        document.getElementById('approveModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeApproveModal();
+            }
+        });
+
+        document.getElementById('rejectModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeRejectModal();
+            }
+        });
+
+        // Close modals with Escape key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeApproveModal();
+                closeRejectModal();
+            }
+        });
+
+        // Add smooth animations on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            const cards = document.querySelectorAll('main > div');
+            cards.forEach((card, index) => {
+                if (card.classList.contains('fixed')) return; // Skip modals
+                
+                card.style.opacity = '0';
+                card.style.transform = 'translateY(20px)';
+                
+                setTimeout(() => {
+                    card.style.transition = 'all 0.3s ease';
+                    card.style.opacity = '1';
+                    card.style.transform = 'translateY(0)';
+                }, index * 150);
+            });
+        });
+    </script>
 </body>
 </html>

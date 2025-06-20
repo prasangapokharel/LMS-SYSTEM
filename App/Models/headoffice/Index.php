@@ -1,5 +1,7 @@
 <?php
 include '../include/loader.php';
+include '../include/buffer.php';
+
 requireRole('principal');
 
 $user = getCurrentUser($pdo);
@@ -8,23 +10,28 @@ $user = getCurrentUser($pdo);
 try {
     // Basic counts
     $stats = [];
-    $stats['students'] = $pdo->query("SELECT COUNT(*) FROM students WHERE is_active = 1")->fetchColumn();
-    $stats['teachers'] = $pdo->query("SELECT COUNT(*) FROM users WHERE role_id = 2 AND is_active = 1")->fetchColumn();
-    $stats['classes'] = $pdo->query("SELECT COUNT(*) FROM classes WHERE is_active = 1")->fetchColumn();
-    $stats['subjects'] = $pdo->query("SELECT COUNT(*) FROM subjects WHERE is_active = 1")->fetchColumn();
     
-    // Leave applications
-    $stats['pending_leaves'] = $pdo->query("SELECT COUNT(*) FROM leave_applications WHERE status = 'pending'")->fetchColumn();
-    $stats['approved_leaves'] = $pdo->query("SELECT COUNT(*) FROM leave_applications WHERE status = 'approved'")->fetchColumn();
+    $queries = [
+        'students' => "SELECT COUNT(*) FROM students WHERE is_active = 1",
+        'teachers' => "SELECT COUNT(*) FROM users WHERE role_id = 2 AND is_active = 1",
+        'classes' => "SELECT COUNT(*) FROM classes WHERE is_active = 1",
+        'subjects' => "SELECT COUNT(*) FROM subjects WHERE is_active = 1",
+        'pending_leaves' => "SELECT COUNT(*) FROM leave_applications WHERE status = 'pending'",
+        'approved_leaves' => "SELECT COUNT(*) FROM leave_applications WHERE status = 'approved'"
+    ];
+    
+    foreach ($queries as $key => $query) {
+        $stats[$key] = $pdo->query($query)->fetchColumn();
+    }
     
     // Attendance today
     $today = date('Y-m-d');
     $stmt = $pdo->prepare("SELECT 
-                          COUNT(*) as total_marked,
-                          SUM(CASE WHEN status = 'present' THEN 1 ELSE 0 END) as present,
-                          SUM(CASE WHEN status = 'absent' THEN 1 ELSE 0 END) as absent,
-                          SUM(CASE WHEN status = 'late' THEN 1 ELSE 0 END) as late
-                          FROM attendance WHERE attendance_date = ?");
+                        COUNT(*) as total_marked,
+                        SUM(CASE WHEN status = 'present' THEN 1 ELSE 0 END) as present,
+                        SUM(CASE WHEN status = 'absent' THEN 1 ELSE 0 END) as absent,
+                        SUM(CASE WHEN status = 'late' THEN 1 ELSE 0 END) as late
+                        FROM attendance WHERE attendance_date = ?");
     $stmt->execute([$today]);
     $attendance_today = $stmt->fetch(PDO::FETCH_ASSOC);
     
@@ -82,6 +89,7 @@ try {
     $active_teachers = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
 } catch (PDOException $e) {
+    // Fallback if database fails
     $stats = ['students' => 0, 'teachers' => 0, 'classes' => 0, 'subjects' => 0, 'pending_leaves' => 0, 'approved_leaves' => 0];
     $attendance_today = ['total_marked' => 0, 'present' => 0, 'absent' => 0, 'late' => 0];
     $recent_leaves = [];
@@ -89,7 +97,11 @@ try {
     $new_students_month = 0;
     $assignments_month = 0;
     $active_teachers = [];
+    
+    // Log the error
+    error_log("Dashboard error: " . $e->getMessage());
 }
 
-include '../include/sidebar.php';
+// Include your view file here
+// include 'views/dashboard.php';
 ?>

@@ -1,43 +1,25 @@
-<?php
-include '../include/connect.php';
-include '../include/session.php';
+<?php 
+// Include necessary files
+include_once '../App/Models/teacher/Index.php';
 
-requireRole('teacher');
+// Set default values to prevent undefined variable warnings
+$current_nepali_date = $current_nepali_date ?? date('F d, Y');
+$classes = $classes ?? [];
+$total_students = $total_students ?? 0;
+$assignment_count = $assignment_count ?? 0;
+$pending_leaves = $pending_leaves ?? [];
+$attendance_summary = $attendance_summary ?? [];
+$recent_assignments = $recent_assignments ?? [];
+$monthly_logs = $monthly_logs ?? [];
 
-$user = getCurrentUser($pdo);
-
-// Get teacher's classes - Fixed query based on actual schema
-$stmt = $pdo->prepare("SELECT DISTINCT c.*, s.subject_name 
-                      FROM classes c
-                      JOIN class_subject_teachers cst ON c.id = cst.class_id
-                      JOIN subjects s ON cst.subject_id = s.id
-                      WHERE cst.teacher_id = ? AND cst.is_active = 1");
-$stmt->execute([$user['id']]);
-$classes = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-// Get total students taught by this teacher - Fixed query
-$stmt = $pdo->prepare("SELECT COUNT(DISTINCT sc.student_id) as total_students
-                      FROM student_classes sc
-                      JOIN class_subject_teachers cst ON sc.class_id = cst.class_id
-                      WHERE cst.teacher_id = ? AND cst.is_active = 1");
-$stmt->execute([$user['id']]);
-$total_students = $stmt->fetch(PDO::FETCH_ASSOC)['total_students'];
-
-// Get pending leave applications - Fixed query with proper joins
-$stmt = $pdo->prepare("SELECT la.*, u.first_name, u.last_name, st.student_id, c.class_name
-                      FROM leave_applications la
-                      JOIN users u ON la.user_id = u.id
-                      JOIN students st ON u.id = st.user_id
-                      JOIN student_classes sc ON st.id = sc.student_id
-                      JOIN class_subject_teachers cst ON sc.class_id = cst.class_id
-                      JOIN classes c ON sc.class_id = c.id
-                      WHERE cst.teacher_id = ? AND la.status = 'pending' AND la.user_type = 'student'
-                      GROUP BY la.id
-                      ORDER BY la.applied_date DESC");
-$stmt->execute([$user['id']]);
-$pending_leaves = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-include '../include/sidebar.php';
+// Ensure attendance summary has proper structure
+if (!empty($attendance_summary)) {
+    foreach ($attendance_summary as &$summary) {
+        $summary['present'] = $summary['present'] ?? 0;
+        $summary['absent'] = $summary['absent'] ?? 0;
+        $summary['total'] = $summary['total'] ?? 0;
+    }
+}
 ?>
 
 <!DOCTYPE html>
@@ -45,406 +27,794 @@ include '../include/sidebar.php';
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Teacher Dashboard - School LMS</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <title>Teacher Dashboard - <?= htmlspecialchars($user['first_name'] . ' ' . $user['last_name']) ?></title>
+    <link rel="stylesheet" href="../assets/css/ui.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        :root {
-            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            --success-gradient: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
-            --warning-gradient: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-            --info-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-        }
-
+        /* Mobile App Pattern Styles */
         body {
-            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            min-height: 100vh;
-        }
-
-        .main-content {
-            margin-left: 250px;
-            padding: 2rem;
-            min-height: 100vh;
-        }
-
-        @media (max-width: 768px) {
-            .main-content {
-                margin-left: 0;
-                padding: 1rem;
-            }
-        }
-
-        .welcome-header {
-            background: var(--primary-gradient);
-            color: white;
-            padding: 2rem;
-            border-radius: 20px;
-            margin-bottom: 2rem;
-            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
-        }
-
-        .welcome-title {
-            font-size: 2.5rem;
-            font-weight: 700;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            font-weight: 500;
+            background: #f8fafc;
             margin: 0;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            padding: 0;
+            padding-bottom: 80px;
         }
 
-        .welcome-subtitle {
-            font-size: 1.1rem;
+        .app-container {
+            max-width: 100%;
+            margin: 0 auto;
+            background: #f8fafc;
+            min-height: 100vh;
+        }
+
+        /* Header Section */
+        .app-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px 16px 24px;
+            border-radius: 0 0 24px 24px;
+            margin-bottom: 16px;
+        }
+
+        .header-title {
+            display: flex;
+            align-items: center;
+            font-size: 28px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .header-title i {
+            margin-right: 12px;
+            font-size: 32px;
+        }
+
+        .header-subtitle {
+            font-size: 16px;
+            font-weight: 400;
             opacity: 0.9;
-            margin: 0.5rem 0 0 0;
+            margin-bottom: 20px;
         }
 
-        .stats-card {
-            background: rgba(255, 255, 255, 0.95);
+        .header-actions {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .header-btn {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 500;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 8px;
             backdrop-filter: blur(10px);
+        }
+
+        .header-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            color: white;
+            text-decoration: none;
+        }
+
+        .header-btn-primary {
+            background: rgba(255, 255, 255, 0.9);
+            color: #667eea;
+        }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            padding: 0 16px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            flex: 1;
+            min-width: calc(50% - 6px);
+            background: white;
             border-radius: 16px;
-            padding: 1.5rem;
-            text-align: center;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            transition: transform 0.3s ease;
-            height: 100%;
+            padding: 20px 16px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+            border: 1px solid #f1f5f9;
         }
 
-        .stats-card:hover {
-            transform: translateY(-5px);
-        }
-
-        .stats-icon {
-            width: 60px;
-            height: 60px;
-            border-radius: 50%;
+        .stat-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
             display: flex;
             align-items: center;
             justify-content: center;
-            margin: 0 auto 1rem;
-            font-size: 1.5rem;
-            color: white;
+            font-size: 20px;
+            margin-bottom: 12px;
         }
 
-        .stats-icon.classes { background: var(--primary-gradient); }
-        .stats-icon.students { background: var(--success-gradient); }
-        .stats-icon.leaves { background: var(--warning-gradient); }
-
-        .stats-number {
-            font-size: 2.5rem;
+        .stat-number {
+            font-size: 32px;
             font-weight: 700;
-            color: #2d3748;
-            margin-bottom: 0.5rem;
+            line-height: 1;
+            margin-bottom: 4px;
         }
 
-        .stats-label {
-            color: #718096;
+        .stat-label {
+            font-size: 14px;
             font-weight: 500;
-            font-size: 1rem;
+            color: #64748b;
+            margin-bottom: 8px;
         }
 
-        .modern-card {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            border-radius: 20px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            overflow: hidden;
-            margin-bottom: 2rem;
+        .stat-trend {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 12px;
+            color: #64748b;
         }
 
-        .card-header-modern {
-            background: var(--primary-gradient);
-            color: white;
-            padding: 1.5rem;
-            border: none;
+        /* Stat Card Variants */
+        .stat-card-primary .stat-icon {
+            background: #dbeafe;
+            color: #3b82f6;
+        }
+        .stat-card-primary .stat-number {
+            color: #3b82f6;
         }
 
-        .card-header-modern h5 {
-            margin: 0;
-            font-weight: 600;
-            font-size: 1.25rem;
+        .stat-card-success .stat-icon {
+            background: #dcfce7;
+            color: #22c55e;
+        }
+        .stat-card-success .stat-number {
+            color: #22c55e;
         }
 
-        .list-group-item-modern {
-            border: none;
-            padding: 1rem 1.5rem;
-            border-bottom: 1px solid #e2e8f0;
-            transition: all 0.3s ease;
+        .stat-card-warning .stat-icon {
+            background: #fef3c7;
+            color: #f59e0b;
+        }
+        .stat-card-warning .stat-number {
+            color: #f59e0b;
         }
 
-        .list-group-item-modern:hover {
-            background-color: #f8fafc;
-            transform: translateX(5px);
+        .stat-card-danger .stat-icon {
+            background: #fee2e2;
+            color: #ef4444;
+        }
+        .stat-card-danger .stat-number {
+            color: #ef4444;
         }
 
-        .list-group-item-modern:last-child {
-            border-bottom: none;
-        }
-
-        .badge-modern {
-            padding: 0.5rem 1rem;
-            border-radius: 20px;
-            font-weight: 600;
-            font-size: 0.875rem;
-            background: var(--info-gradient);
-            color: white;
-        }
-
-        .quick-action-btn {
-            background: rgba(255, 255, 255, 0.9);
-            border: 2px solid transparent;
+        /* Section Cards */
+        .section-card {
+            background: white;
             border-radius: 16px;
-            padding: 2rem;
-            text-decoration: none;
-            color: #2d3748;
-            transition: all 0.3s ease;
-            height: 100%;
+            margin: 0 16px 16px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+            border: 1px solid #f1f5f9;
+            overflow: hidden;
+        }
+
+        .section-header {
+            padding: 20px 20px 16px;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .section-title {
+            display: flex;
+            align-items: center;
+            font-size: 18px;
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 4px;
+        }
+
+        .section-title i {
+            margin-right: 8px;
+            color: #3b82f6;
+        }
+
+        .section-subtitle {
+            font-size: 14px;
+            color: #64748b;
+            font-weight: 400;
+        }
+
+        .section-body {
+            padding: 20px;
+        }
+
+        /* Attendance Summary */
+        .attendance-grid {
             display: flex;
             flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            min-height: 150px;
+            gap: 16px;
         }
 
-        .quick-action-btn:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
-            color: #2d3748;
-            border-color: #667eea;
+        .attendance-item {
+            background: #f8fafc;
+            border-radius: 12px;
+            padding: 16px;
+            border: 1px solid #e2e8f0;
         }
 
-        .quick-action-btn i {
-            font-size: 3rem;
-            margin-bottom: 1rem;
-            background: var(--primary-gradient);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        .quick-action-btn span {
+        .attendance-class {
+            font-size: 16px;
             font-weight: 600;
-            font-size: 1rem;
+            color: #1e293b;
+            margin-bottom: 12px;
         }
 
-        .leave-item {
-            padding: 1rem 1.5rem;
-            border-bottom: 1px solid #e2e8f0;
-            transition: all 0.3s ease;
+        .attendance-stats {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
         }
 
-        .leave-item:hover {
-            background-color: #f8fafc;
+        .attendance-stat {
+            text-align: center;
+            flex: 1;
         }
 
-        .leave-item:last-child {
+        .attendance-number {
+            font-size: 24px;
+            font-weight: 700;
+            line-height: 1;
+            margin-bottom: 4px;
+        }
+
+        .attendance-label {
+            font-size: 12px;
+            font-weight: 500;
+            color: #64748b;
+        }
+
+        .text-success { color: #22c55e; }
+        .text-danger { color: #ef4444; }
+        .text-primary { color: #3b82f6; }
+
+        /* Quick Actions Grid */
+        .actions-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .action-item {
+            flex: 1;
+            min-width: calc(33.333% - 8px);
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 16px 12px;
+            text-decoration: none;
+            text-align: center;
+            color: inherit;
+        }
+
+        .action-item:hover {
+            background: #f1f5f9;
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .action-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 8px;
+            font-size: 18px;
+        }
+
+        .action-text {
+            font-size: 12px;
+            font-weight: 500;
+            color: #1e293b;
+            line-height: 1.3;
+        }
+
+        /* Action Variants */
+        .action-primary .action-icon {
+            background: #dbeafe;
+            color: #3b82f6;
+        }
+
+        .action-info .action-icon {
+            background: #e0f2fe;
+            color: #0ea5e9;
+        }
+
+        .action-success .action-icon {
+            background: #dcfce7;
+            color: #22c55e;
+        }
+
+        .action-warning .action-icon {
+            background: #fef3c7;
+            color: #f59e0b;
+        }
+
+        .action-purple .action-icon {
+            background: #f3e8ff;
+            color: #8b5cf6;
+        }
+
+        .action-dark .action-icon {
+            background: #f1f5f9;
+            color: #475569;
+        }
+
+        /* Data Lists */
+        .data-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+        }
+
+        .data-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 0;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .data-item:last-child {
             border-bottom: none;
         }
 
-        .leave-meta {
-            font-size: 0.875rem;
-            color: #718096;
+        .data-content {
+            flex: 1;
         }
 
+        .data-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 4px;
+        }
+
+        .data-meta {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 4px;
+        }
+
+        .data-details {
+            font-size: 12px;
+            color: #64748b;
+        }
+
+        .data-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        /* Badges */
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            font-size: 11px;
+            font-weight: 600;
+            border-radius: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .badge-primary {
+            background: #dbeafe;
+            color: #3b82f6;
+        }
+
+        .badge-success {
+            background: #dcfce7;
+            color: #22c55e;
+        }
+
+        .badge-warning {
+            background: #fef3c7;
+            color: #f59e0b;
+        }
+
+        /* Buttons */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 8px 12px;
+            font-size: 12px;
+            font-weight: 500;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            text-decoration: none;
+        }
+
+        .btn-sm {
+            padding: 6px 10px;
+            font-size: 11px;
+        }
+
+        .btn-primary {
+            background: #3b82f6;
+            color: white;
+        }
+
+        .btn-secondary {
+            background: #f1f5f9;
+            color: #475569;
+            border: 1px solid #e2e8f0;
+        }
+
+        /* Empty State */
         .empty-state {
             text-align: center;
-            padding: 3rem 1rem;
-            color: #718096;
+            padding: 40px 20px;
         }
 
-        .empty-state i {
-            font-size: 4rem;
-            margin-bottom: 1rem;
-            opacity: 0.5;
+        .empty-icon {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            background: #f1f5f9;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 16px;
+            font-size: 24px;
+            color: #94a3b8;
         }
 
-        @media (max-width: 768px) {
-            .welcome-title {
-                font-size: 2rem;
+        .empty-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 8px;
+        }
+
+        .empty-text {
+            font-size: 14px;
+            color: #64748b;
+            margin-bottom: 20px;
+            line-height: 1.5;
+        }
+
+        /* Responsive Design */
+        @media (min-width: 768px) {
+            .app-container {
+                max-width: 768px;
             }
             
-            .stats-number {
-                font-size: 2rem;
+            .stats-grid {
+                gap: 16px;
             }
             
-            .quick-action-btn {
-                min-height: 120px;
-                padding: 1.5rem;
+            .stat-card {
+                min-width: calc(25% - 12px);
             }
             
-            .quick-action-btn i {
-                font-size: 2.5rem;
+            .actions-grid {
+                gap: 16px;
+            }
+            
+            .action-item {
+                min-width: calc(16.666% - 14px);
+            }
+        }
+
+        @media (min-width: 1024px) {
+            .app-container {
+                max-width: 1024px;
+                padding: 0 20px;
             }
         }
     </style>
 </head>
 <body>
-    <div class="d-flex">
-        <div class="main-content">
-            <!-- Welcome Header -->
-            <div class="welcome-header">
-                <h1 class="welcome-title">
-                    <i class="bi bi-person-workspace me-3"></i>
-                    Welcome, <?= htmlspecialchars($user['first_name'] . ' ' . $user['last_name']) ?>!
-                </h1>
-                <p class="welcome-subtitle">Teacher Dashboard - Manage your classes, students, and assignments</p>
-            </div>
+    <?php include '../include/loader.php'; ?>
 
-            <!-- Statistics Cards -->
-            <div class="row mb-4">
-                <div class="col-md-4 mb-3">
-                    <div class="stats-card">
-                        <div class="stats-icon classes">
-                            <i class="bi bi-journal-bookmark"></i>
-                        </div>
-                        <div class="stats-number"><?= count($classes) ?></div>
-                        <div class="stats-label">My Classes</div>
-                    </div>
+    <div class="app-container">
+        <!-- App Header -->
+        <div class="app-header">
+            <h1 class="header-title">
+                <i class="fas fa-chalkboard-teacher"></i>
+                Teacher Dashboard
+            </h1>
+            <p class="header-subtitle">
+                स्वागतम्, <?= htmlspecialchars($user['first_name'] . ' ' . $user['last_name']) ?>!<br>
+                आजको मिति: <?= htmlspecialchars($current_nepali_date) ?>
+            </p>
+            <div class="header-actions">
+                <a href="attendance.php" class="header-btn header-btn-primary">
+                    <i class="fas fa-calendar-check"></i>
+                    Take Attendance
+                </a>
+                <a href="assignments.php" class="header-btn">
+                    <i class="fas fa-tasks"></i>
+                    Assignments
+                </a>
+            </div>
+        </div>
+
+        <!-- Statistics Grid -->
+        <div class="stats-grid">
+            <div class="stat-card stat-card-primary">
+                <div class="stat-icon">
+                    <i class="fas fa-chalkboard"></i>
                 </div>
-                
-                <div class="col-md-4 mb-3">
-                    <div class="stats-card">
-                        <div class="stats-icon students">
-                            <i class="bi bi-people"></i>
-                        </div>
-                        <div class="stats-number"><?= $total_students ?></div>
-                        <div class="stats-label">My Students</div>
-                    </div>
-                </div>
-                
-                <div class="col-md-4 mb-3">
-                    <div class="stats-card">
-                        <div class="stats-icon leaves">
-                            <i class="bi bi-calendar-x"></i>
-                        </div>
-                        <div class="stats-number"><?= count($pending_leaves) ?></div>
-                        <div class="stats-label">Pending Leaves</div>
-                    </div>
+                <div class="stat-number"><?= count($classes) ?></div>
+                <div class="stat-label">My Classes</div>
+                <div class="stat-trend">
+                    <i class="fas fa-arrow-up"></i>
+                    <span>Active Classes</span>
                 </div>
             </div>
             
-            <!-- Content Cards -->
-            <div class="row">
-                <div class="col-lg-6">
-                    <div class="modern-card">
-                        <div class="card-header-modern">
-                            <h5>
-                                <i class="bi bi-journal-bookmark me-2"></i>
-                                My Classes
-                            </h5>
-                        </div>
-                        <div class="card-body p-0">
-                            <?php if (empty($classes)): ?>
-                            <div class="empty-state">
-                                <i class="bi bi-journal-x"></i>
-                                <h6>No Classes Assigned</h6>
-                                <p>You don't have any classes assigned yet. Contact the administration for class assignments.</p>
-                            </div>
-                            <?php else: ?>
-                            <div class="list-group list-group-flush">
-                                <?php foreach ($classes as $class): ?>
-                                <a href="class_details.php?id=<?= $class['id'] ?>" class="list-group-item list-group-item-action list-group-item-modern d-flex justify-content-between align-items-center">
-                                    <div>
-                                        <h6 class="mb-1"><?= htmlspecialchars($class['class_name']) ?></h6>
-                                        <small class="text-muted">Section: <?= htmlspecialchars($class['section']) ?></small>
-                                    </div>
-                                    <span class="badge-modern"><?= htmlspecialchars($class['subject_name']) ?></span>
-                                </a>
-                                <?php endforeach; ?>
-                            </div>
-                            <?php endif; ?>
-                        </div>
-                    </div>
+            <div class="stat-card stat-card-success">
+                <div class="stat-icon">
+                    <i class="fas fa-users"></i>
                 </div>
-                
-                <div class="col-lg-6">
-                    <div class="modern-card">
-                        <div class="card-header-modern">
-                            <h5>
-                                <i class="bi bi-calendar-x me-2"></i>
-                                Pending Leave Applications
-                            </h5>
-                        </div>
-                        <div class="card-body p-0">
-                            <?php if (empty($pending_leaves)): ?>
-                            <div class="empty-state">
-                                <i class="bi bi-calendar-check"></i>
-                                <h6>No Pending Leaves</h6>
-                                <p>All students are present. No pending leave applications to review.</p>
-                            </div>
-                            <?php else: ?>
-                            <div class="list-group list-group-flush">
-                                <?php foreach ($pending_leaves as $leave): ?>
-                                <a href="../headoffice/leave_details.php?id=<?= $leave['id'] ?>" class="list-group-item list-group-item-action leave-item">
-                                    <div class="d-flex w-100 justify-content-between align-items-start">
-                                        <div>
-                                            <h6 class="mb-1"><?= htmlspecialchars($leave['first_name'] . ' ' . $leave['last_name']) ?></h6>
-                                            <p class="mb-1 leave-meta">
-                                                <i class="bi bi-person-badge me-1"></i>
-                                                Student ID: <?= htmlspecialchars($leave['student_id']) ?> | 
-                                                <i class="bi bi-building me-1"></i>
-                                                Class: <?= htmlspecialchars($leave['class_name']) ?>
-                                            </p>
-                                            <small class="leave-meta">
-                                                <i class="bi bi-calendar-range me-1"></i>
-                                                <?= htmlspecialchars(date('M d', strtotime($leave['from_date']))) ?> - 
-                                                <?= htmlspecialchars(date('M d, Y', strtotime($leave['to_date']))) ?>
-                                                (<?= $leave['total_days'] ?> days)
-                                            </small>
-                                        </div>
-                                        <small class="text-muted">
-                                            <?= htmlspecialchars(date('M d, Y', strtotime($leave['applied_date']))) ?>
-                                        </small>
-                                    </div>
-                                </a>
-                                <?php endforeach; ?>
-                            </div>
-                            <?php endif; ?>
-                        </div>
-                    </div>
+                <div class="stat-number"><?= $total_students ?></div>
+                <div class="stat-label">Total Students</div>
+                <div class="stat-trend">
+                    <i class="fas fa-user-graduate"></i>
+                    <span>Enrolled Students</span>
                 </div>
             </div>
             
-            <!-- Quick Actions -->
-            <div class="modern-card">
-                <div class="card-header-modern">
-                    <h5>
-                        <i class="bi bi-lightning me-2"></i>
-                        Quick Actions
-                    </h5>
+            <div class="stat-card stat-card-warning">
+                <div class="stat-icon">
+                    <i class="fas fa-tasks"></i>
                 </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-lg-3 col-md-6 mb-3">
-                            <a href="attendance.php" class="quick-action-btn">
-                                <i class="bi bi-calendar-check"></i>
-                                <span>Take Attendance</span>
-                            </a>
-                        </div>
-                        <div class="col-lg-3 col-md-6 mb-3">
-                            <a href="assignments.php" class="quick-action-btn">
-                                <i class="bi bi-journal-text"></i>
-                                <span>Manage Assignments</span>
-                            </a>
-                        </div>
-                        <div class="col-lg-3 col-md-6 mb-3">
-                            <a href="students.php" class="quick-action-btn">
-                                <i class="bi bi-people"></i>
-                                <span>View Students</span>
-                            </a>
-                        </div>
-                        <div class="col-lg-3 col-md-6 mb-3">
-                            <a href="teacher_log.php" class="quick-action-btn">
-                                <i class="bi bi-journal-plus"></i>
-                                <span>Daily Log</span>
-                            </a>
-                        </div>
-                    </div>
+                <div class="stat-number"><?= $assignment_count ?></div>
+                <div class="stat-label">Assignments</div>
+                <div class="stat-trend">
+                    <i class="fas fa-clipboard-list"></i>
+                    <span>Total Created</span>
+                </div>
+            </div>
+            
+            <div class="stat-card stat-card-danger">
+                <div class="stat-icon">
+                    <i class="fas fa-calendar-times"></i>
+                </div>
+                <div class="stat-number"><?= count($pending_leaves) ?></div>
+                <div class="stat-label">Pending Leaves</div>
+                <div class="stat-trend">
+                    <i class="fas fa-clock"></i>
+                    <span>Awaiting Review</span>
                 </div>
             </div>
         </div>
+
+        <!-- Today's Attendance Summary -->
+        <?php if (!empty($attendance_summary)): ?>
+        <div class="section-card">
+            <div class="section-header">
+                <h2 class="section-title">
+                    <i class="fas fa-calendar-day"></i>
+                    Today's Attendance Summary
+                </h2>
+                <p class="section-subtitle">Attendance status for <?= date('F d, Y') ?></p>
+            </div>
+            <div class="section-body">
+                <div class="attendance-grid">
+                    <?php foreach ($attendance_summary as $summary): ?>
+                    <div class="attendance-item">
+                        <div class="attendance-class">
+                            <?= htmlspecialchars($summary['class_name']) ?> - <?= htmlspecialchars($summary['subject_name']) ?>
+                        </div>
+                        <div class="attendance-stats">
+                            <div class="attendance-stat">
+                                <div class="attendance-number text-success"><?= intval($summary['present']) ?></div>
+                                <div class="attendance-label">Present</div>
+                            </div>
+                            <div class="attendance-stat">
+                                <div class="attendance-number text-danger"><?= intval($summary['absent']) ?></div>
+                                <div class="attendance-label">Absent</div>
+                            </div>
+                            <div class="attendance-stat">
+                                <div class="attendance-number text-primary"><?= intval($summary['total']) ?></div>
+                                <div class="attendance-label">Total</div>
+                            </div>
+                        </div>
+                    </div>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+        </div>
+        <?php endif; ?>
+
+        <!-- Quick Actions -->
+        <div class="section-card">
+            <div class="section-header">
+                <h2 class="section-title">
+                    <i class="fas fa-bolt"></i>
+                    Quick Actions
+                </h2>
+                <p class="section-subtitle">Frequently used teacher functions</p>
+            </div>
+            <div class="section-body">
+                <div class="actions-grid">
+                    <a href="attendance.php" class="action-item action-primary">
+                        <div class="action-icon">
+                            <i class="fas fa-calendar-check"></i>
+                        </div>
+                        <div class="action-text">Take Attendance</div>
+                    </a>
+                    
+                    <a href="assignments.php" class="action-item action-info">
+                        <div class="action-icon">
+                            <i class="fas fa-file-alt"></i>
+                        </div>
+                        <div class="action-text">Manage Assignments</div>
+                    </a>
+                    
+                    <a href="students.php" class="action-item action-success">
+                        <div class="action-icon">
+                            <i class="fas fa-user-graduate"></i>
+                        </div>
+                        <div class="action-text">View Students</div>
+                    </a>
+                    
+                    <a href="teacher_log.php" class="action-item action-warning">
+                        <div class="action-icon">
+                            <i class="fas fa-journal-whills"></i>
+                        </div>
+                        <div class="action-text">Daily Log</div>
+                    </a>
+                    
+                    <a href="grades.php" class="action-item action-purple">
+                        <div class="action-icon">
+                            <i class="fas fa-chart-line"></i>
+                        </div>
+                        <div class="action-text">Grade Management</div>
+                    </a>
+                    
+                    <a href="schedule.php" class="action-item action-dark">
+                        <div class="action-icon">
+                            <i class="fas fa-clock"></i>
+                        </div>
+                        <div class="action-text">Class Schedule</div>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- My Classes -->
+        <div class="section-card">
+            <div class="section-header">
+                <h2 class="section-title">
+                    <i class="fas fa-chalkboard"></i>
+                    My Classes & Subjects
+                </h2>
+                <p class="section-subtitle">Classes assigned to you</p>
+            </div>
+            <div class="section-body">
+                <?php if (empty($classes)): ?>
+                <div class="empty-state">
+                    <div class="empty-icon">
+                        <i class="fas fa-chalkboard"></i>
+                    </div>
+                    <h3 class="empty-title">No Classes Assigned</h3>
+                    <p class="empty-text">You don't have any classes assigned yet. Contact the administration for class assignments.</p>
+                    <a href="../headoffice/manage_users.php" class="btn btn-secondary">Contact Admin</a>
+                </div>
+                <?php else: ?>
+                <div class="data-list">
+                    <?php foreach ($classes as $class): ?>
+                    <div class="data-item">
+                        <div class="data-content">
+                            <div class="data-title"><?= htmlspecialchars($class['class_name']) ?> - Section <?= htmlspecialchars($class['section']) ?></div>
+                            <div class="data-meta">
+                                <span class="badge badge-primary"><?= htmlspecialchars($class['subject_name']) ?></span>
+                            </div>
+                        </div>
+                        <div class="data-actions">
+                            <a href="class_details.php?class_id=<?= $class['id'] ?>" class="btn btn-sm btn-secondary">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                            <a href="attendance.php?class_id=<?= $class['id'] ?>" class="btn btn-sm btn-primary">
+                                <i class="fas fa-calendar-check"></i>
+                            </a>
+                        </div>
+                    </div>
+                    <?php endforeach; ?>
+                </div>
+                <?php endif; ?>
+            </div>
+        </div>
+
+        <!-- Recent Assignments -->
+        <?php if (!empty($recent_assignments)): ?>
+        <div class="section-card">
+            <div class="section-header">
+                <h2 class="section-title">
+                    <i class="fas fa-tasks"></i>
+                    Recent Assignments
+                </h2>
+                <p class="section-subtitle">Latest assignments you've created</p>
+            </div>
+            <div class="section-body">
+                <div class="data-list">
+                    <?php foreach ($recent_assignments as $assignment): ?>
+                    <div class="data-item">
+                        <div class="data-content">
+                            <div class="data-title"><?= htmlspecialchars($assignment['title']) ?></div>
+                            <div class="data-meta">
+                                <span><?= htmlspecialchars($assignment['class_name']) ?> - <?= htmlspecialchars($assignment['subject_name']) ?></span>
+                            </div>
+                            <div class="data-details">
+                                <i class="fas fa-calendar"></i>
+                                Due: <?= date('M d, Y', strtotime($assignment['due_date'])) ?>
+                            </div>
+                        </div>
+                        <div class="data-actions">
+                            <a href="assignment_details.php?id=<?= $assignment['id'] ?>" class="btn btn-sm btn-secondary">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                        </div>
+                    </div>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+        </div>
+        <?php endif; ?>
+
+        <!-- Pending Leave Applications -->
+        <?php if (!empty($pending_leaves)): ?>
+        <div class="section-card">
+            <div class="section-header">
+                <h2 class="section-title">
+                    <i class="fas fa-calendar-times"></i>
+                    Pending Leave Applications
+                </h2>
+                <p class="section-subtitle">Student leave requests awaiting review</p>
+            </div>
+            <div class="section-body">
+                <div class="data-list">
+                    <?php foreach ($pending_leaves as $leave): ?>
+                    <div class="data-item">
+                        <div class="data-content">
+                            <div class="data-title"><?= htmlspecialchars($leave['first_name'] . ' ' . $leave['last_name']) ?></div>
+                            <div class="data-meta">
+                                <span>ID: <?= htmlspecialchars($leave['student_id']) ?></span>
+                                <span class="badge badge-warning"><?= ucfirst(htmlspecialchars($leave['leave_type'])) ?></span>
+                            </div>
+                            <div class="data-details">
+                                <i class="fas fa-calendar-range"></i>
+                                <?= date('M d', strtotime($leave['from_date'])) ?> - <?= date('M d, Y', strtotime($leave['to_date'])) ?>
+                                (<?= intval($leave['total_days']) ?> days)
+                            </div>
+                        </div>
+                        <div class="data-actions">
+                            <a href="../headoffice/leave_details.php?id=<?= $leave['id'] ?>" class="btn btn-sm btn-secondary">
+                                <i class="fas fa-eye"></i> Review
+                            </a>
+                        </div>
+                    </div>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+        </div>
+        <?php endif; ?>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Include Bottom Navigation -->
+    <?php include '../include/bootoomnav.php'; ?>
 </body>
 </html>

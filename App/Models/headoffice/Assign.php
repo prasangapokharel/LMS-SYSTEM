@@ -141,5 +141,4 @@ $stmt = $pdo->prepare("SELECT COUNT(*) as student_count FROM student_classes
 $stmt->execute([$class_id, $current_academic_year['id']]);
 $student_count = $stmt->fetch(PDO::FETCH_ASSOC)['student_count'];
 
-include '../include/sidebar.php';
 ?>

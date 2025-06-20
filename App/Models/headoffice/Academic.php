@@ -325,6 +325,5 @@ try {
 } catch (Exception $e) {
     $top_students = [];
 }
-include '../include/sidebar.php';
 
 ?>

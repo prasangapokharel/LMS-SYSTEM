@@ -1,45 +1,29 @@
-
 <?php 
 // Include necessary files
 include_once '../App/Models/headoffice/Index.php';
-?>
 
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Principal Dashboard - School LMS</title>
-    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="../assets/css/ui.css">
+    <!-- Include your Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
 </head>
 <body class="bg-gray-50">
     <div class="flex">
         <!-- Main Content -->
         <main class="flex-1 p-4 lg:p-8 ml-0 lg:ml-64">
-            <!-- Welcome Header -->
-            <div class="bg-gradient-to-r from-blue-700 to-indigo-800 rounded-xl p-6 text-white shadow-lg mb-6">
-                <div class="flex flex-col md:flex-row md:items-center md:justify-between">
-                    <div class="mb-4 md:mb-0">
-                        <h1 class="text-2xl md:text-3xl font-bold mb-1">Welcome, Principal <?= htmlspecialchars($user['last_name']) ?></h1>
-                        <p class="text-blue-100">School Management Dashboard • <?= date('l, F j, Y') ?></p>
-                    </div>
-                    <div class="flex space-x-4">
-                        <div class="text-center">
-                            <div class="text-2xl font-bold"><?= $stats['students'] ?></div>
-                            <div class="text-sm text-blue-100">Students</div>
-                        </div>
-                        <div class="text-center">
-                            <div class="text-2xl font-bold"><?= $stats['teachers'] ?></div>
-                            <div class="text-sm text-blue-100">Teachers</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+     
+   
 
             <!-- Key Metrics -->
             <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                <!-- Student Card -->
                 <div class="bg-white rounded-xl p-5 shadow hover:shadow-md transition-shadow">
                     <div class="flex items-center justify-between mb-3">
                         <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center text-blue-600">
@@ -51,6 +35,7 @@ include_once '../App/Models/headoffice/Index.php';
                     <p class="text-sm text-gray-500">Total Students</p>
                 </div>
 
+                <!-- Teacher Card -->
                 <div class="bg-white rounded-xl p-5 shadow hover:shadow-md transition-shadow">
                     <div class="flex items-center justify-between mb-3">
                         <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center text-green-600">
@@ -61,6 +46,7 @@ include_once '../App/Models/headoffice/Index.php';
                     <p class="text-sm text-gray-500">Active Teachers</p>
                 </div>
 
+                <!-- Classes Card -->
                 <div class="bg-white rounded-xl p-5 shadow hover:shadow-md transition-shadow">
                     <div class="flex items-center justify-between mb-3">
                         <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center text-purple-600">
@@ -71,6 +57,7 @@ include_once '../App/Models/headoffice/Index.php';
                     <p class="text-sm text-gray-500">Active Classes</p>
                 </div>
 
+                <!-- Leave Applications Card -->
                 <div class="bg-white rounded-xl p-5 shadow hover:shadow-md transition-shadow">
                     <div class="flex items-center justify-between mb-3">
                         <div class="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center text-red-600">
@@ -85,7 +72,7 @@ include_once '../App/Models/headoffice/Index.php';
 
             <!-- Attendance Overview -->
             <div class="bg-white rounded-xl shadow mb-6">
-                <div class="p-5 border-b border-gray-100">
+                <div class="p-5 border-b border-gray-200">
                     <h2 class="text-lg font-semibold text-gray-800 flex items-center">
                         <i class="fas fa-check-circle text-green-600 mr-2"></i>
                         Today's Attendance Overview
@@ -93,6 +80,7 @@ include_once '../App/Models/headoffice/Index.php';
                 </div>
                 <div class="p-5">
                     <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
+                        <!-- Present -->
                         <div class="text-center">
                             <div class="w-16 h-16 mx-auto mb-3 relative">
                                 <svg class="w-16 h-16 transform -rotate-90" viewBox="0 0 36 36">
@@ -114,6 +102,7 @@ include_once '../App/Models/headoffice/Index.php';
                             <p class="text-sm font-medium text-gray-700">Present</p>
                         </div>
                         
+                        <!-- Absent -->
                         <div class="text-center">
                             <div class="w-16 h-16 mx-auto mb-3 relative">
                                 <svg class="w-16 h-16 transform -rotate-90" viewBox="0 0 36 36">
@@ -135,6 +124,7 @@ include_once '../App/Models/headoffice/Index.php';
                             <p class="text-sm font-medium text-gray-700">Absent</p>
                         </div>
                         
+                        <!-- Late -->
                         <div class="text-center">
                             <div class="w-16 h-16 mx-auto mb-3 relative">
                                 <svg class="w-16 h-16 transform -rotate-90" viewBox="0 0 36 36">
@@ -156,6 +146,7 @@ include_once '../App/Models/headoffice/Index.php';
                             <p class="text-sm font-medium text-gray-700">Late</p>
                         </div>
                         
+                        <!-- Total Marked -->
                         <div class="text-center">
                             <div class="w-16 h-16 mx-auto mb-3 bg-gradient-to-br from-blue-100 to-blue-200 rounded-full flex items-center justify-center">
                                 <span class="text-2xl font-bold text-blue-600"><?= $attendance_today['total_marked'] ?></span>
@@ -183,7 +174,7 @@ include_once '../App/Models/headoffice/Index.php';
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
                 <!-- Pending Leave Applications -->
                 <div class="bg-white rounded-xl shadow">
-                    <div class="p-5 border-b border-gray-100 flex justify-between items-center">
+                    <div class="p-5 border-b border-gray-200 flex justify-between items-center">
                         <h2 class="text-lg font-semibold text-gray-800 flex items-center">
                             <i class="fas fa-calendar-times text-orange-500 mr-2"></i>
                             Pending Leave Applications
@@ -200,7 +191,7 @@ include_once '../App/Models/headoffice/Index.php';
                         <?php else: ?>
                             <div class="space-y-4">
                                 <?php foreach ($recent_leaves as $leave): ?>
-                                    <div class="flex items-start space-x-4 p-4 bg-gradient-to-r from-orange-50 to-red-50 rounded-xl border border-orange-100">
+                                    <div class="flex items-start space-x-4 p-4 bg-orange-50 rounded-xl border border-orange-200">
                                         <div class="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center flex-shrink-0">
                                             <i class="fas fa-user text-orange-600"></i>
                                         </div>
@@ -231,7 +222,7 @@ include_once '../App/Models/headoffice/Index.php';
 
                 <!-- Recent Assignments -->
                 <div class="bg-white rounded-xl shadow">
-                    <div class="p-5 border-b border-gray-100 flex justify-between items-center">
+                    <div class="p-5 border-b border-gray-200 flex justify-between items-center">
                         <h2 class="text-lg font-semibold text-gray-800 flex items-center">
                             <i class="fas fa-file-alt text-blue-600 mr-2"></i>
                             Recent Assignments
@@ -247,7 +238,7 @@ include_once '../App/Models/headoffice/Index.php';
                         <?php else: ?>
                             <div class="space-y-4">
                                 <?php foreach ($recent_assignments as $assignment): ?>
-                                    <div class="flex items-start space-x-4 p-4 bg-gradient-to-r from-blue-50 to-cyan-50 rounded-xl border border-blue-100">
+                                    <div class="flex items-start space-x-4 p-4 bg-blue-50 rounded-xl border border-blue-200">
                                         <div class="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0">
                                             <i class="fas fa-file-alt text-blue-600"></i>
                                         </div>
@@ -274,7 +265,7 @@ include_once '../App/Models/headoffice/Index.php';
 
             <!-- Most Active Teachers -->
             <div class="bg-white rounded-xl shadow mb-6">
-                <div class="p-5 border-b border-gray-100">
+                <div class="p-5 border-b border-gray-200">
                     <h2 class="text-lg font-semibold text-gray-800 flex items-center">
                         <i class="fas fa-award text-yellow-500 mr-2"></i>
                         Most Active Teachers (Last 30 Days)
@@ -341,7 +332,7 @@ include_once '../App/Models/headoffice/Index.php';
 
             <!-- Administrative Quick Actions -->
             <div class="bg-white rounded-xl shadow">
-                <div class="p-5 border-b border-gray-100">
+                <div class="p-5 border-b border-gray-200">
                     <h2 class="text-lg font-semibold text-gray-800 flex items-center">
                         <i class="fas fa-bolt text-yellow-500 mr-2"></i>
                         Administrative Actions
@@ -349,36 +340,36 @@ include_once '../App/Models/headoffice/Index.php';
                 </div>
                 <div class="p-5">
                     <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
-                        <a href="manage_users.php" class="group flex flex-col items-center p-4 bg-gradient-to-br from-blue-50 to-cyan-50 rounded-xl border border-blue-100 hover:shadow-lg transition-all">
-                            <div class="w-12 h-12 bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                        <a href="manage_users.php" class="group flex flex-col items-center p-4 bg-blue-50 rounded-xl border border-blue-200 hover:shadow-lg transition-all">
+                            <div class="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
                                 <i class="fas fa-users text-white"></i>
                             </div>
                             <span class="text-sm font-medium text-gray-800 text-center">Manage Users</span>
                         </a>
 
-                        <a href="leave_management.php" class="group flex flex-col items-center p-4 bg-gradient-to-br from-orange-50 to-red-50 rounded-xl border border-orange-100 hover:shadow-lg transition-all">
-                            <div class="w-12 h-12 bg-gradient-to-r from-orange-500 to-red-500 rounded-xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                        <a href="leave_management.php" class="group flex flex-col items-center p-4 bg-orange-50 rounded-xl border border-orange-200 hover:shadow-lg transition-all">
+                            <div class="w-12 h-12 bg-orange-500 rounded-xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
                                 <i class="fas fa-calendar-times text-white"></i>
                             </div>
                             <span class="text-sm font-medium text-gray-800 text-center">Leave Management</span>
                         </a>
 
-                        <a href="attendance_reports.php" class="group flex flex-col items-center p-4 bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl border border-green-100 hover:shadow-lg transition-all">
-                            <div class="w-12 h-12 bg-gradient-to-r from-green-500 to-emerald-500 rounded-xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                        <a href="attendance_reports.php" class="group flex flex-col items-center p-4 bg-green-50 rounded-xl border border-green-200 hover:shadow-lg transition-all">
+                            <div class="w-12 h-12 bg-green-500 rounded-xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
                                 <i class="fas fa-chart-bar text-white"></i>
                             </div>
                             <span class="text-sm font-medium text-gray-800 text-center">Attendance Reports</span>
                         </a>
 
-                        <a href="createclass.php" class="group flex flex-col items-center p-4 bg-gradient-to-br from-purple-50 to-indigo-50 rounded-xl border border-purple-100 hover:shadow-lg transition-all">
-                            <div class="w-12 h-12 bg-gradient-to-r from-purple-500 to-indigo-500 rounded-xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                        <a href="createclass.php" class="group flex flex-col items-center p-4 bg-purple-50 rounded-xl border border-purple-200 hover:shadow-lg transition-all">
+                            <div class="w-12 h-12 bg-purple-500 rounded-xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
                                 <i class="fas fa-school text-white"></i>
                             </div>
                             <span class="text-sm font-medium text-gray-800 text-center">Manage Classes</span>
                         </a>
                         
-                        <a href="teacher_logs.php" class="group flex flex-col items-center p-4 bg-gradient-to-br from-pink-50 to-rose-50 rounded-xl border border-pink-100 hover:shadow-lg transition-all">
-                            <div class="w-12 h-12 bg-gradient-to-r from-pink-500 to-rose-500 rounded-xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                        <a href="teacher_logs.php" class="group flex flex-col items-center p-4 bg-pink-50 rounded-xl border border-pink-200 hover:shadow-lg transition-all">
+                            <div class="w-12 h-12 bg-pink-500 rounded-xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
                                 <i class="fas fa-clipboard-list text-white"></i>
                             </div>
                             <span class="text-sm font-medium text-gray-800 text-center">Teacher Logs</span>
@@ -389,7 +380,8 @@ include_once '../App/Models/headoffice/Index.php';
         </main>
     </div>
 
-
+    <!-- Include sidebar -->
+    <?php include '../include/sidebar.php'; ?>
     <script>
         // Update current time
         function updateTime() {

@@ -9,68 +9,38 @@ requireRole('principal');
 // Include the Academic model
 include_once '../App/Models/headoffice/Academic.php';
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Academic Analytics - School LMS</title>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <link href="../assets/css/ui.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="../assets/css/ui.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        primary: {
-                            50: '#f0f9ff',
-                            100: '#e0f2fe',
-                            200: '#bae6fd',
-                            300: '#7dd3fc',
-                            400: '#38bdf8',
-                            500: '#0ea5e9',
-                            600: '#0284c7',
-                            700: '#0369a1',
-                            800: '#075985',
-                            900: '#0c4a6e',
-                        }
-                    }
-                }
-            }
-        }
-    </script>
 </head>
 <body class="bg-gray-50">
-    <?php include_once '../include/sidebar.php'; ?>
-
-    <div class="lg:pl-64 pt-16 lg:pt-0">
-        <div class="p-4 sm:p-6 lg:p-8">
+    <div class="flex">
+        <!-- Main Content -->
+        <main class="flex-1 p-4 lg:p-8 ml-0 lg:ml-64">
             <!-- Page Header -->
-            <div class="mb-8">
-                <div class="flex items-center justify-between">
+            <div class="bg-gradient-to-r from-blue-600 to-blue-700 rounded-xl p-6 text-white shadow-lg mb-6">
+                <div class="flex flex-col md:flex-row md:items-center md:justify-between">
                     <div>
-                        <h1 class="text-2xl font-bold text-gray-900 flex items-center">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                            </svg>
+                        <h1 class="text-2xl md:text-3xl font-bold mb-2">
+                            <i class="fas fa-chart-line mr-3"></i>
                             Academic Analytics
                         </h1>
-                        <p class="mt-1 text-sm text-gray-500">Comprehensive academic performance insights and trends</p>
+                        <p class="text-blue-100">Comprehensive academic performance insights and trends</p>
                     </div>
-                    <div class="flex space-x-2">
-                        <button class="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                            </svg>
+                    <div class="flex space-x-3 mt-4 md:mt-0">
+                        <button class="btn btn2">
+                            <i class="fas fa-download mr-2"></i>
                             Export
                         </button>
-                        <button class="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-                            </svg>
+                        <button class="btn btn1">
+                            <i class="fas fa-plus mr-2"></i>
                             Generate Report
                         </button>
                     </div>
@@ -78,18 +48,16 @@ include_once '../App/Models/headoffice/Academic.php';
             </div>
 
             <!-- Filters -->
-            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-8">
-                <h5 class="text-lg font-medium text-gray-900 mb-4 flex items-center">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
-                    </svg>
+            <div class="bg-white rounded-xl shadow p-6 mb-6">
+                <h5 class="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+                    <i class="fas fa-filter text-blue-600 mr-2"></i>
                     Analytics Filters
                 </h5>
                 <form method="get" class="space-y-4">
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Class</label>
-                            <select name="class_id" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm">
+                            <label class="form-label">Class</label>
+                            <select name="class_id" class="form-input">
                                 <option value="">All Classes</option>
                                 <?php foreach ($classes as $class): ?>
                                 <option value="<?= $class['id'] ?>" <?= $class_filter == $class['id'] ? 'selected' : '' ?>>
@@ -99,8 +67,8 @@ include_once '../App/Models/headoffice/Academic.php';
                             </select>
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Subject</label>
-                            <select name="subject_id" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm">
+                            <label class="form-label">Subject</label>
+                            <select name="subject_id" class="form-input">
                                 <option value="">All Subjects</option>
                                 <?php foreach ($subjects as $subject): ?>
                                 <option value="<?= $subject['id'] ?>" <?= $subject_filter == $subject['id'] ? 'selected' : '' ?>>
@@ -110,26 +78,24 @@ include_once '../App/Models/headoffice/Academic.php';
                             </select>
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">From Date</label>
-                            <input type="date" name="date_from" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm" value="<?= htmlspecialchars($date_from) ?>">
+                            <label class="form-label">From Date</label>
+                            <input type="date" name="date_from" class="form-input" value="<?= htmlspecialchars($date_from) ?>">
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">To Date</label>
-                            <input type="date" name="date_to" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm" value="<?= htmlspecialchars($date_to) ?>">
+                            <label class="form-label">To Date</label>
+                            <input type="date" name="date_to" class="form-input" value="<?= htmlspecialchars($date_to) ?>">
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Time Period</label>
-                            <select name="period" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm">
+                            <label class="form-label">Time Period</label>
+                            <select name="period" class="form-input">
                                 <option value="monthly" <?= $period == 'monthly' ? 'selected' : '' ?>>Monthly</option>
                                 <option value="weekly" <?= $period == 'weekly' ? 'selected' : '' ?>>Weekly</option>
                             </select>
                         </div>
                     </div>
                     <div class="flex justify-end">
-                        <button type="submit" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                            </svg>
+                        <button type="submit" class="btn btn1">
+                            <i class="fas fa-chart-bar mr-2"></i>
                             Generate Analytics
                         </button>
                     </div>
@@ -137,95 +103,61 @@ include_once '../App/Models/headoffice/Academic.php';
             </div>
 
             <!-- Overall Statistics -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-                <div class="bg-white overflow-hidden shadow-sm rounded-lg border border-gray-200">
-                    <div class="p-5">
-                        <div class="flex items-center">
-                            <div class="flex-shrink-0 bg-blue-500 rounded-md p-3">
-                                <svg class="h-6 w-6 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-                                </svg>
-                            </div>
-                            <div class="ml-5 w-0 flex-1">
-                                <dl>
-                                    <dt class="text-sm font-medium text-gray-500 truncate">Total Students</dt>
-                                    <dd class="flex items-baseline">
-                                        <div class="text-2xl font-semibold text-gray-900"><?= $overall_stats['total_students'] ?? 0 ?></div>
-                                    </dd>
-                                </dl>
-                            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                <div class="bg-white rounded-xl p-5 shadow">
+                    <div class="flex items-center">
+                        <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center text-blue-600 mr-4">
+                            <i class="fas fa-users text-xl"></i>
+                        </div>
+                        <div>
+                            <p class="text-sm font-medium text-gray-500">Total Students</p>
+                            <p class="text-2xl font-bold text-gray-900"><?= $overall_stats['total_students'] ?? 0 ?></p>
                         </div>
                     </div>
                 </div>
 
-                <div class="bg-white overflow-hidden shadow-sm rounded-lg border border-gray-200">
-                    <div class="p-5">
-                        <div class="flex items-center">
-                            <div class="flex-shrink-0 bg-green-500 rounded-md p-3">
-                                <svg class="h-6 w-6 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" />
-                                </svg>
-                            </div>
-                            <div class="ml-5 w-0 flex-1">
-                                <dl>
-                                    <dt class="text-sm font-medium text-gray-500 truncate">Total Teachers</dt>
-                                    <dd class="flex items-baseline">
-                                        <div class="text-2xl font-semibold text-gray-900"><?= $overall_stats['total_teachers'] ?? 0 ?></div>
-                                    </dd>
-                                </dl>
-                            </div>
+                <div class="bg-white rounded-xl p-5 shadow">
+                    <div class="flex items-center">
+                        <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center text-green-600 mr-4">
+                            <i class="fas fa-chalkboard-teacher text-xl"></i>
+                        </div>
+                        <div>
+                            <p class="text-sm font-medium text-gray-500">Total Teachers</p>
+                            <p class="text-2xl font-bold text-gray-900"><?= $overall_stats['total_teachers'] ?? 0 ?></p>
                         </div>
                     </div>
                 </div>
 
-                <div class="bg-white overflow-hidden shadow-sm rounded-lg border border-gray-200">
-                    <div class="p-5">
-                        <div class="flex items-center">
-                            <div class="flex-shrink-0 bg-purple-500 rounded-md p-3">
-                                <svg class="h-6 w-6 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                                </svg>
-                            </div>
-                            <div class="ml-5 w-0 flex-1">
-                                <dl>
-                                    <dt class="text-sm font-medium text-gray-500 truncate">Total Classes</dt>
-                                    <dd class="flex items-baseline">
-                                        <div class="text-2xl font-semibold text-gray-900"><?= $overall_stats['total_classes'] ?? 0 ?></div>
-                                    </dd>
-                                </dl>
-                            </div>
+                <div class="bg-white rounded-xl p-5 shadow">
+                    <div class="flex items-center">
+                        <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center text-purple-600 mr-4">
+                            <i class="fas fa-school text-xl"></i>
+                        </div>
+                        <div>
+                            <p class="text-sm font-medium text-gray-500">Total Classes</p>
+                            <p class="text-2xl font-bold text-gray-900"><?= $overall_stats['total_classes'] ?? 0 ?></p>
                         </div>
                     </div>
                 </div>
 
-                <div class="bg-white overflow-hidden shadow-sm rounded-lg border border-gray-200">
-                    <div class="p-5">
-                        <div class="flex items-center">
-                            <div class="flex-shrink-0 bg-yellow-500 rounded-md p-3">
-                                <svg class="h-6 w-6 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                                </svg>
-                            </div>
-                            <div class="ml-5 w-0 flex-1">
-                                <dl>
-                                    <dt class="text-sm font-medium text-gray-500 truncate">Total Subjects</dt>
-                                    <dd class="flex items-baseline">
-                                        <div class="text-2xl font-semibold text-gray-900"><?= $overall_stats['total_subjects'] ?? 0 ?></div>
-                                    </dd>
-                                </dl>
-                            </div>
+                <div class="bg-white rounded-xl p-5 shadow">
+                    <div class="flex items-center">
+                        <div class="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center text-yellow-600 mr-4">
+                            <i class="fas fa-book text-xl"></i>
+                        </div>
+                        <div>
+                            <p class="text-sm font-medium text-gray-500">Total Subjects</p>
+                            <p class="text-2xl font-bold text-gray-900"><?= $overall_stats['total_subjects'] ?? 0 ?></p>
                         </div>
                     </div>
                 </div>
             </div>
 
             <!-- Attendance Trends Chart -->
-            <div class="bg-white rounded-lg shadow-sm border border-gray-200 mb-8">
-                <div class="px-6 py-5 border-b border-gray-200">
-                    <h3 class="text-lg font-medium leading-6 text-gray-900 flex items-center">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
-                        </svg>
+            <div class="bg-white rounded-xl shadow overflow-hidden mb-6">
+                <div class="bg-gradient-to-r from-blue-600 to-blue-700 p-5">
+                    <h3 class="text-lg font-bold text-white flex items-center">
+                        <i class="fas fa-chart-line mr-2"></i>
                         Attendance Trends
                     </h3>
                 </div>
@@ -236,14 +168,12 @@ include_once '../App/Models/headoffice/Academic.php';
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
                 <!-- Class-wise Attendance -->
-                <div class="bg-white rounded-lg shadow-sm border border-gray-200">
-                    <div class="px-6 py-5 border-b border-gray-200">
-                        <h3 class="text-lg font-medium leading-6 text-gray-900 flex items-center">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                            </svg>
+                <div class="bg-white rounded-xl shadow overflow-hidden">
+                    <div class="bg-gradient-to-r from-indigo-600 to-indigo-700 p-5">
+                        <h3 class="text-lg font-bold text-white flex items-center">
+                            <i class="fas fa-school mr-2"></i>
                             Class-wise Attendance
                         </h3>
                     </div>
@@ -259,16 +189,16 @@ include_once '../App/Models/headoffice/Academic.php';
                                 elseif ($percentage >= 70) $status_class = 'bg-yellow-500';
                                 ?>
                                 <div>
-                                    <div class="flex justify-between items-center mb-1">
+                                    <div class="flex justify-between items-center mb-2">
                                         <h6 class="text-sm font-medium text-gray-900"><?= htmlspecialchars($class_data['class_name'] . ' ' . $class_data['section']) ?></h6>
-                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                        <span class="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                                             <?= $percentage ?>%
                                         </span>
                                     </div>
                                     <div class="w-full bg-gray-200 rounded-full h-2">
                                         <div class="<?= $status_class ?> h-2 rounded-full" style="width: <?= $percentage ?>%"></div>
                                     </div>
-                                    <div class="flex justify-between mt-1">
+                                    <div class="flex justify-between mt-2">
                                         <span class="text-xs text-gray-500"><?= $class_data['class_students'] ?> students</span>
                                         <span class="text-xs text-gray-500"><?= $class_data['class_present'] ?> present / <?= $class_data['class_records'] ?> total</span>
                                     </div>
@@ -277,23 +207,19 @@ include_once '../App/Models/headoffice/Academic.php';
                             </div>
                         <?php else: ?>
                             <div class="text-center py-10">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                                </svg>
-                                <h3 class="mt-2 text-sm font-medium text-gray-900">No attendance data available</h3>
-                                <p class="mt-1 text-sm text-gray-500">No data available for the selected criteria and date range.</p>
+                                <i class="fas fa-chart-bar text-gray-300 text-5xl mb-3"></i>
+                                <h3 class="text-sm font-medium text-gray-900">No attendance data available</h3>
+                                <p class="text-sm text-gray-500 mt-1">No data available for the selected criteria and date range.</p>
                             </div>
                         <?php endif; ?>
                     </div>
                 </div>
 
                 <!-- Subject Performance -->
-                <div class="bg-white rounded-lg shadow-sm border border-gray-200">
-                    <div class="px-6 py-5 border-b border-gray-200">
-                        <h3 class="text-lg font-medium leading-6 text-gray-900 flex items-center">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                            </svg>
+                <div class="bg-white rounded-xl shadow overflow-hidden">
+                    <div class="bg-gradient-to-r from-green-600 to-green-700 p-5">
+                        <h3 class="text-lg font-bold text-white flex items-center">
+                            <i class="fas fa-book mr-2"></i>
                             Subject Performance
                         </h3>
                     </div>
@@ -309,16 +235,16 @@ include_once '../App/Models/headoffice/Academic.php';
                                 elseif ($avg_score >= 70) $status_class = 'bg-yellow-500';
                                 ?>
                                 <div>
-                                    <div class="flex justify-between items-center mb-1">
+                                    <div class="flex justify-between items-center mb-2">
                                         <h6 class="text-sm font-medium text-gray-900"><?= htmlspecialchars($subject['subject_name']) ?></h6>
-                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                        <span class="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                                             <?= $avg_score ?>/100
                                         </span>
                                     </div>
                                     <div class="w-full bg-gray-200 rounded-full h-2">
                                         <div class="<?= $status_class ?> h-2 rounded-full" style="width: <?= $avg_score ?>%"></div>
                                     </div>
-                                    <div class="flex justify-between mt-1">
+                                    <div class="flex justify-between mt-2">
                                         <span class="text-xs text-gray-500"><?= $subject['total_assignments'] ?> assignments</span>
                                         <span class="text-xs text-gray-500">Range: <?= round($subject['min_score'], 1) ?> - <?= round($subject['max_score'], 1) ?></span>
                                     </div>
@@ -327,11 +253,9 @@ include_once '../App/Models/headoffice/Academic.php';
                             </div>
                         <?php else: ?>
                             <div class="text-center py-10">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                                </svg>
-                                <h3 class="mt-2 text-sm font-medium text-gray-900">No subject performance data available</h3>
-                                <p class="mt-1 text-sm text-gray-500">No data available for the selected criteria and date range.</p>
+                                <i class="fas fa-book text-gray-300 text-5xl mb-3"></i>
+                                <h3 class="text-sm font-medium text-gray-900">No subject performance data available</h3>
+                                <p class="text-sm text-gray-500 mt-1">No data available for the selected criteria and date range.</p>
                             </div>
                         <?php endif; ?>
                     </div>
@@ -339,28 +263,26 @@ include_once '../App/Models/headoffice/Academic.php';
             </div>
 
             <!-- Teacher Performance -->
-            <div class="bg-white rounded-lg shadow-sm border border-gray-200 mb-8">
-                <div class="px-6 py-5 border-b border-gray-200">
-                    <h3 class="text-lg font-medium leading-6 text-gray-900 flex items-center">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                        </svg>
+            <div class="bg-white rounded-xl shadow overflow-hidden mb-6">
+                <div class="bg-gradient-to-r from-purple-600 to-purple-700 p-5">
+                    <h3 class="text-lg font-bold text-white flex items-center">
+                        <i class="fas fa-chalkboard-teacher mr-2"></i>
                         Teacher Performance
                     </h3>
                 </div>
                 <div class="p-6">
                     <?php if (!empty($teacher_performance)): ?>
                         <div class="overflow-x-auto">
-                            <table class="min-w-full divide-y divide-gray-200">
+                            <table class="w-full">
                                 <thead class="bg-gray-50">
                                     <tr>
-                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Teacher</th>
-                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Classes Taught</th>
-                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Subjects</th>
-                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Logs</th>
-                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Avg. Attendance</th>
-                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Teaching Hours</th>
-                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Performance</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Teacher</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Classes Taught</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Subjects</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Logs</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Avg. Attendance</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Teaching Hours</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Performance</th>
                                     </tr>
                                 </thead>
                                 <tbody class="bg-white divide-y divide-gray-200">
@@ -375,12 +297,10 @@ include_once '../App/Models/headoffice/Academic.php';
                                     <tr>
                                         <td class="px-6 py-4 whitespace-nowrap">
                                             <div class="flex items-center">
-                                                <div class="flex-shrink-0 h-10 w-10 flex items-center justify-center rounded-full bg-blue-600 text-white">
+                                                <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white font-bold mr-3">
                                                     <?= strtoupper(substr($teacher['first_name'], 0, 1) . substr($teacher['last_name'], 0, 1)) ?>
                                                 </div>
-                                                <div class="ml-4">
-                                                    <div class="text-sm font-medium text-gray-900"><?= htmlspecialchars($teacher['first_name'] . ' ' . $teacher['last_name']) ?></div>
-                                                </div>
+                                                <div class="text-sm font-medium text-gray-900"><?= htmlspecialchars($teacher['first_name'] . ' ' . $teacher['last_name']) ?></div>
                                             </div>
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500"><?= $teacher['classes_taught'] ?></td>
@@ -401,24 +321,20 @@ include_once '../App/Models/headoffice/Academic.php';
                         </div>
                     <?php else: ?>
                         <div class="text-center py-10">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                            </svg>
-                            <h3 class="mt-2 text-sm font-medium text-gray-900">No teacher performance data available</h3>
-                            <p class="mt-1 text-sm text-gray-500">No data available for the selected criteria and date range.</p>
+                            <i class="fas fa-chalkboard-teacher text-gray-300 text-5xl mb-3"></i>
+                            <h3 class="text-sm font-medium text-gray-900">No teacher performance data available</h3>
+                            <p class="text-sm text-gray-500 mt-1">No data available for the selected criteria and date range.</p>
                         </div>
                     <?php endif; ?>
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
                 <!-- Assignment Submission Rates -->
-                <div class="bg-white rounded-lg shadow-sm border border-gray-200">
-                    <div class="px-6 py-5 border-b border-gray-200">
-                        <h3 class="text-lg font-medium leading-6 text-gray-900 flex items-center">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
-                            </svg>
+                <div class="bg-white rounded-xl shadow overflow-hidden">
+                    <div class="bg-gradient-to-r from-orange-600 to-orange-700 p-5">
+                        <h3 class="text-lg font-bold text-white flex items-center">
+                            <i class="fas fa-clipboard-check mr-2"></i>
                             Assignment Submission Rates
                         </h3>
                     </div>
@@ -429,36 +345,32 @@ include_once '../App/Models/headoffice/Academic.php';
                             </div>
                         <?php else: ?>
                             <div class="text-center py-10">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                                </svg>
-                                <h3 class="mt-2 text-sm font-medium text-gray-900">No submission data available</h3>
-                                <p class="mt-1 text-sm text-gray-500">No data available for the selected criteria and date range.</p>
+                                <i class="fas fa-clipboard-check text-gray-300 text-5xl mb-3"></i>
+                                <h3 class="text-sm font-medium text-gray-900">No submission data available</h3>
+                                <p class="text-sm text-gray-500 mt-1">No data available for the selected criteria and date range.</p>
                             </div>
                         <?php endif; ?>
                     </div>
                 </div>
 
                 <!-- Top Performing Students -->
-                <div class="bg-white rounded-lg shadow-sm border border-gray-200">
-                    <div class="px-6 py-5 border-b border-gray-200">
-                        <h3 class="text-lg font-medium leading-6 text-gray-900 flex items-center">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
-                            </svg>
+                <div class="bg-white rounded-xl shadow overflow-hidden">
+                    <div class="bg-gradient-to-r from-yellow-600 to-yellow-700 p-5">
+                        <h3 class="text-lg font-bold text-white flex items-center">
+                            <i class="fas fa-star mr-2"></i>
                             Top Performing Students
                         </h3>
                     </div>
                     <div class="p-6">
                         <?php if (!empty($top_students)): ?>
                             <div class="overflow-x-auto">
-                                <table class="min-w-full divide-y divide-gray-200">
+                                <table class="w-full">
                                     <thead class="bg-gray-50">
                                         <tr>
-                                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Student</th>
-                                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Class</th>
-                                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Assignments</th>
-                                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Avg. Score</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Student</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Class</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Assignments</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Avg. Score</th>
                                         </tr>
                                     </thead>
                                     <tbody class="bg-white divide-y divide-gray-200">
@@ -487,20 +399,20 @@ include_once '../App/Models/headoffice/Academic.php';
                             </div>
                         <?php else: ?>
                             <div class="text-center py-10">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
-                            </svg>
-                                <h3 class="mt-2 text-sm font-medium text-gray-900">No student performance data available</h3>
-                                <p class="mt-1 text-sm text-gray-500">No data available for the selected criteria and date range.</p>
+                                <i class="fas fa-star text-gray-300 text-5xl mb-3"></i>
+                                <h3 class="text-sm font-medium text-gray-900">No student performance data available</h3>
+                                <p class="text-sm text-gray-500 mt-1">No data available for the selected criteria and date range.</p>
                             </div>
                         <?php endif; ?>
                     </div>
                 </div>
             </div>
-        </div>
+        </main>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Include sidebar -->
+    <?php include '../include/sidebar.php'; ?>
+        
     <script>
         // Attendance Trends Chart
         const attendanceTrendCtx = document.getElementById('attendanceTrendChart').getContext('2d');

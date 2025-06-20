@@ -210,5 +210,4 @@ $stmt = $pdo->query("SELECT DATE_FORMAT(log_date, '%Y-%m') as month, COUNT(*) as
                     ORDER BY month DESC");
 $monthly_trends = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-include '../include/sidebar.php';
 ?>

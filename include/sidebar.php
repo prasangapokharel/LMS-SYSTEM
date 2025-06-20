@@ -38,7 +38,7 @@ if ($current_role == 'principal') {
         ['title' => 'Leave Management', 'url' => '/headoffice/leave_management.php', 'icon' => $icons['leave'], 'page' => 'leave_management.php'],
         ['title' => 'Teacher Logs', 'url' => '/headoffice/teacher_logs.php', 'icon' => $icons['teacher_log'], 'page' => 'teacher_logs.php'],
         ['title' => 'Academic Analytics', 'url' => '/headoffice/academic_analytics.php', 'icon' => $icons['analytics'], 'page' => 'academic_analytics.php'],
-        ['title' => 'System Settings', 'url' => '/headoffice/settings.php', 'icon' => $icons['settings'], 'page' => 'settings.php'],
+        ['title' => 'Create User', 'url' => '/headoffice/createusers.php', 'icon' => $icons['users'], 'page' => 'createusers.php'],
     ];
 } elseif ($current_role == 'teacher') {
     $nav_items = [
@@ -64,7 +64,7 @@ if ($current_role == 'principal') {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="../assets/js/tailwind.js"></script>
     <script>
         tailwind.config = {
             theme: {
@@ -101,18 +101,7 @@ if ($current_role == 'principal') {
 <!-- Desktop Sidebar -->
 <div class="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 lg:z-50">
     <div class="flex flex-col flex-grow bg-sidebar-bg overflow-y-auto border-r border-sidebar-border h-full">
-        <!-- Logo/Brand -->
-        <div class="flex items-center flex-shrink-0 px-6 py-6 border-b border-sidebar-border">
-            <div class="flex items-center space-x-3">
-                <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center text-white">
-                    <?= $icons['school'] ?>
-                </div>
-                <div>
-                    <h1 class="text-xl font-bold text-white">School LMS</h1>
-                    <p class="text-xs text-sidebar-muted">Learning Management System</p>
-                </div>
-            </div>
-        </div>
+       
 
         <!-- User Profile Card -->
         <div class="px-6 py-4 border-b border-sidebar-border">

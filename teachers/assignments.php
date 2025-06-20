@@ -1,692 +1,817 @@
 <?php
-include '../include/connect.php';
-include '../include/session.php';
-
-requireRole('teacher');
-
-$user = getCurrentUser($pdo);
-$msg = "";
-
-// Handle form submission for new assignment
-if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['title'])) {
-    $subject_id = $_POST['subject_id'];
-    $title = $_POST['title'];
-    $description = $_POST['description'];
-    $due_date = $_POST['due_date'];
-    $max_marks = $_POST['max_marks'];
-    $assignment_type = $_POST['assignment_type'];
-    $instructions = $_POST['instructions'];
-    
-    // Validate due date is in the future
-    if (strtotime($due_date) <= time()) {
-        $msg = "<div class='alert alert-danger'>Due date must be in the future.</div>";
-    } else {
-        try {
-            // Handle file upload
-            $attachment_url = null;
-            if (isset($_FILES['attachment']) && $_FILES['attachment']['error'] == 0) {
-                $upload_dir = '../uploads/assignments/';
-                if (!is_dir($upload_dir)) {
-                    mkdir($upload_dir, 0755, true);
-                }
-                
-                $file_extension = pathinfo($_FILES['attachment']['name'], PATHINFO_EXTENSION);
-                $allowed_extensions = ['pdf', 'doc', 'docx', 'txt', 'jpg', 'jpeg', 'png', 'gif'];
-                
-                if (in_array(strtolower($file_extension), $allowed_extensions)) {
-                    $filename = uniqid() . '.' . $file_extension;
-                    $upload_path = $upload_dir . $filename;
-                    
-                    if (move_uploaded_file($_FILES['attachment']['tmp_name'], $upload_path)) {
-                        $attachment_url = 'uploads/assignments/' . $filename;
-                    }
-                }
-            }
-            
-            // Get class_id from subject
-            $stmt = $pdo->prepare("SELECT cst.class_id FROM class_subject_teachers cst WHERE cst.subject_id = ? AND cst.teacher_id = ?");
-            $stmt->execute([$subject_id, $user['id']]);
-            $class_info = $stmt->fetch(PDO::FETCH_ASSOC);
-            
-            if (!$class_info) {
-                throw new Exception("Invalid subject selection.");
-            }
-            
-            $stmt = $pdo->prepare("INSERT INTO assignments 
-                                  (title, description, class_id, subject_id, teacher_id, due_date, max_marks, assignment_type, instructions, attachment_url, created_at) 
-                                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())");
-            $stmt->execute([$title, $description, $class_info['class_id'], $subject_id, $user['id'], $due_date, $max_marks, $assignment_type, $instructions, $attachment_url]);
-            
-            $assignment_id = $pdo->lastInsertId();
-            logActivity($pdo, 'assignment_created', 'assignments', $assignment_id);
-            
-            $msg = "<div class='alert alert-success alert-modern'>
-                    <div class='alert-icon'>✅</div>
-                    <div><strong>Assignment created successfully!</strong></div>
-                   </div>";
-        } catch (Exception $e) {
-            $msg = "<div class='alert alert-danger alert-modern'>
-                    <div class='alert-icon'>❌</div>
-                    <div><strong>Error:</strong> " . htmlspecialchars($e->getMessage()) . "</div>
-                   </div>";
-        }
-    }
-}
-
-// Handle assignment deletion
-if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['delete_assignment'])) {
-    $assignment_id = $_POST['assignment_id'];
-    
-    try {
-        // Check if assignment belongs to this teacher
-        $stmt = $pdo->prepare("SELECT id FROM assignments WHERE id = ? AND teacher_id = ?");
-        $stmt->execute([$assignment_id, $user['id']]);
-        
-        if ($stmt->fetch()) {
-            $stmt = $pdo->prepare("DELETE FROM assignments WHERE id = ? AND teacher_id = ?");
-            $stmt->execute([$assignment_id, $user['id']]);
-            
-            logActivity($pdo, 'assignment_deleted', 'assignments', $assignment_id);
-            $msg = "<div class='alert alert-success alert-modern'>
-                    <div class='alert-icon'>✅</div>
-                    <div><strong>Assignment deleted successfully!</strong></div>
-                   </div>";
-        } else {
-            $msg = "<div class='alert alert-danger alert-modern'>
-                    <div class='alert-icon'>❌</div>
-                    <div><strong>Error:</strong> Assignment not found or access denied.</div>
-                   </div>";
-        }
-    } catch (PDOException $e) {
-        $msg = "<div class='alert alert-danger alert-modern'>
-                <div class='alert-icon'>❌</div>
-                <div><strong>Error:</strong> " . htmlspecialchars($e->getMessage()) . "</div>
-               </div>";
-    }
-}
-
-// Get teacher's subjects with class information
-$stmt = $pdo->prepare("SELECT s.id, s.subject_name, c.class_name, cst.class_id
-                      FROM class_subject_teachers cst
-                      JOIN subjects s ON cst.subject_id = s.id
-                      JOIN classes c ON cst.class_id = c.id
-                      WHERE cst.teacher_id = ? AND cst.is_active = 1
-                      ORDER BY c.class_name, s.subject_name");
-$stmt->execute([$user['id']]);
-$subjects = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-// Get teacher's assignments with submission counts
-$stmt = $pdo->prepare("SELECT a.*, s.subject_name, c.class_name,
-                      (SELECT COUNT(*) FROM assignment_submissions asub WHERE asub.assignment_id = a.id) as submissions,
-                      (SELECT COUNT(DISTINCT sc.student_id) FROM student_classes sc WHERE sc.class_id = a.class_id AND sc.status = 'enrolled') as total_students
-                      FROM assignments a
-                      JOIN subjects s ON a.subject_id = s.id
-                      JOIN classes c ON a.class_id = c.id
-                      WHERE a.teacher_id = ?
-                      ORDER BY a.created_at DESC");
-$stmt->execute([$user['id']]);
-$assignments = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-include '../include/sidebar.php';
+include '../App/Models/teacher/Assignment.php';
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Manage Assignments - School LMS</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <title>Assignments - <?= htmlspecialchars($user['first_name'] . ' ' . $user['last_name']) ?></title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        :root {
-            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            --success-gradient: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
-            --warning-gradient: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-            --info-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-            --danger-gradient: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
 
         body {
-            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            color: #1a202c;
+            font-size: 13px;
+            font-weight: 500;
+            line-height: 1.4;
             min-height: 100vh;
         }
 
-        .main-content {
-            margin-left: 250px;
-            padding: 2rem;
+        .app-container {
+            max-width: 480px;
+            margin: 0 auto;
+            background: #ffffff;
             min-height: 100vh;
+            position: relative;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
         }
 
-        @media (max-width: 768px) {
-            .main-content {
-                margin-left: 0;
-                padding: 1rem;
-            }
-        }
-
+        /* Header Styles */
         .page-header {
-            background: var(--primary-gradient);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
-            padding: 2rem;
-            border-radius: 20px;
-            margin-bottom: 2rem;
-            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+            padding: 16px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            backdrop-filter: blur(10px);
+        }
+
+        .header-top {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 8px;
+        }
+
+        .back-btn {
+            color: white;
+            text-decoration: none;
+            font-size: 18px;
+            padding: 8px;
+            border-radius: 8px;
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
         }
 
         .page-title {
-            font-size: 2.5rem;
-            font-weight: 700;
+            font-size: 18px;
+            font-weight: 600;
             margin: 0;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            flex: 1;
         }
 
         .page-subtitle {
-            font-size: 1.1rem;
+            font-size: 12px;
             opacity: 0.9;
-            margin: 0.5rem 0 0 0;
-        }
-
-        .modern-card {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            border-radius: 20px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            overflow: hidden;
-            margin-bottom: 2rem;
-        }
-
-        .card-header-modern {
-            background: var(--primary-gradient);
-            color: white;
-            padding: 1.5rem;
-            border: none;
-        }
-
-        .card-header-modern h5 {
             margin: 0;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+        }
+
+        .header-btn {
+            background: rgba(255,255,255,0.15);
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 11px;
             font-weight: 600;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            backdrop-filter: blur(10px);
         }
 
-        .form-control-modern {
+        /* Message Styles */
+        .message-container {
+            padding: 12px 16px 0;
+        }
+
+        .alert {
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .alert-success {
+            background: #f0fff4;
+            color: #22543d;
+            border: 1px solid #9ae6b4;
+        }
+
+        .alert-danger {
+            background: #fed7d7;
+            color: #742a2a;
+            border: 1px solid #fc8181;
+        }
+
+        /* Form Styles */
+        .form-section {
+            padding: 16px;
+        }
+
+        .form-toggle {
+            background: #f7fafc;
+            border: 1px solid #e2e8f0;
             border-radius: 12px;
-            border: 2px solid #e2e8f0;
-            padding: 0.75rem 1rem;
-            transition: all 0.3s ease;
+            margin-bottom: 16px;
+            overflow: hidden;
         }
 
-        .form-control-modern:focus {
+        .form-toggle-header {
+            padding: 12px 16px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: between;
+        }
+
+        .form-toggle-title {
+            font-size: 14px;
+            font-weight: 600;
+            flex: 1;
+        }
+
+        .form-toggle-icon {
+            font-size: 12px;
+            transition: transform 0.3s ease;
+        }
+
+        .form-toggle.collapsed .form-toggle-icon {
+            transform: rotate(-90deg);
+        }
+
+        .form-toggle-body {
+            padding: 16px;
+            display: block;
+        }
+
+        .form-toggle.collapsed .form-toggle-body {
+            display: none;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 11px;
+            font-weight: 600;
+            color: #4a5568;
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .form-input, .form-select, .form-textarea {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 500;
+            background: white;
+            transition: border-color 0.2s ease;
+        }
+
+        .form-input:focus, .form-select:focus, .form-textarea:focus {
+            outline: none;
             border-color: #667eea;
             box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
         }
 
-        .btn-modern {
-            border-radius: 12px;
-            padding: 0.75rem 1.5rem;
-            font-weight: 600;
-            border: none;
-            transition: all 0.3s ease;
-            text-decoration: none;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
+        .form-textarea {
+            resize: vertical;
+            min-height: 60px;
         }
 
-        .btn-primary-modern {
-            background: var(--primary-gradient);
-            color: white;
-        }
-
-        .btn-success-modern {
-            background: var(--success-gradient);
-            color: white;
-        }
-
-        .btn-warning-modern {
-            background: var(--warning-gradient);
-            color: white;
-        }
-
-        .btn-danger-modern {
-            background: var(--danger-gradient);
-            color: white;
-        }
-
-        .btn-info-modern {
-            background: var(--info-gradient);
-            color: white;
-        }
-
-        .btn-modern:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
-        }
-
-        .table-modern {
-            background: white;
-            border-radius: 12px;
-            overflow: hidden;
-            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
-        }
-
-        .table-modern thead {
-            background: var(--primary-gradient);
-            color: white;
-        }
-
-        .table-modern th {
-            border: none;
-            padding: 1rem;
-            font-weight: 600;
-        }
-
-        .table-modern td {
-            border: none;
-            padding: 1rem;
-            vertical-align: middle;
-        }
-
-        .table-modern tbody tr {
-            border-bottom: 1px solid #e2e8f0;
-        }
-
-        .table-modern tbody tr:hover {
-            background-color: #f8fafc;
-        }
-
-        .badge-modern {
-            padding: 0.5rem 1rem;
-            border-radius: 20px;
-            font-weight: 600;
-            font-size: 0.875rem;
-        }
-
-        .badge-type-homework {
-            background: var(--info-gradient);
-            color: white;
-        }
-
-        .badge-type-project {
-            background: var(--warning-gradient);
-            color: white;
-        }
-
-        .badge-type-quiz {
-            background: var(--success-gradient);
-            color: white;
-        }
-
-        .badge-type-exam {
-            background: var(--danger-gradient);
-            color: white;
-        }
-
-        .alert-modern {
-            border-radius: 16px;
-            border: none;
-            padding: 1.5rem;
-            margin-bottom: 2rem;
-            display: flex;
-            align-items: flex-start;
-            gap: 1rem;
-        }
-
-        .alert-icon {
-            font-size: 1.5rem;
-            flex-shrink: 0;
-        }
-
-        .assignment-card {
-            background: rgba(255, 255, 255, 0.9);
-            border-radius: 16px;
-            padding: 1.5rem;
-            margin-bottom: 1rem;
-            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
-            border-left: 4px solid;
-            transition: transform 0.3s ease;
-        }
-
-        .assignment-card:hover {
-            transform: translateY(-2px);
-        }
-
-        .assignment-card.homework { border-left-color: #4facfe; }
-        .assignment-card.project { border-left-color: #f093fb; }
-        .assignment-card.quiz { border-left-color: #11998e; }
-        .assignment-card.exam { border-left-color: #ff6b6b; }
-
-        .assignment-meta {
+        .form-row {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 1rem;
-            margin: 1rem 0;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
         }
 
-        .meta-item {
-            background: rgba(255, 255, 255, 0.5);
-            padding: 0.75rem;
-            border-radius: 8px;
-            text-align: center;
-        }
-
-        .meta-label {
-            font-size: 0.875rem;
-            color: #718096;
-            font-weight: 500;
-        }
-
-        .meta-value {
-            font-weight: 600;
-            color: #2d3748;
-            font-size: 1.1rem;
-        }
-
-        .progress-modern {
-            height: 8px;
-            border-radius: 10px;
-            background: #e2e8f0;
-            overflow: hidden;
-        }
-
-        .progress-bar-modern {
-            height: 100%;
-            border-radius: 10px;
-            background: var(--success-gradient);
-            transition: width 0.3s ease;
-        }
-
-        .file-upload-area {
+        /* File Upload */
+        .file-upload {
             border: 2px dashed #e2e8f0;
-            border-radius: 12px;
-            padding: 2rem;
+            border-radius: 8px;
+            padding: 20px;
             text-align: center;
-            transition: all 0.3s ease;
             cursor: pointer;
+            transition: all 0.3s ease;
         }
 
-        .file-upload-area:hover {
+        .file-upload:hover {
             border-color: #667eea;
             background: rgba(102, 126, 234, 0.05);
         }
 
-        .file-upload-area.dragover {
-            border-color: #667eea;
-            background: rgba(102, 126, 234, 0.1);
+        .file-upload-icon {
+            font-size: 24px;
+            color: #a0aec0;
+            margin-bottom: 8px;
         }
 
-        @media (max-width: 768px) {
-            .page-title {
-                font-size: 2rem;
-            }
-            
-            .assignment-meta {
+        .file-upload-text {
+            font-size: 12px;
+            color: #718096;
+            margin-bottom: 4px;
+        }
+
+        .file-upload-hint {
+            font-size: 10px;
+            color: #a0aec0;
+        }
+
+        /* Button Styles */
+        .btn {
+            padding: 10px 16px;
+            border: none;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 600;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+            color: white;
+        }
+
+        .btn-warning {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            color: white;
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            color: white;
+        }
+
+        .btn-info {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            color: white;
+        }
+
+        .btn-full {
+            width: 100%;
+        }
+
+        .btn-sm {
+            padding: 6px 10px;
+            font-size: 11px;
+        }
+
+        /* Assignment Cards */
+        .assignments-list {
+            padding: 16px;
+            padding-bottom: 80px;
+        }
+
+        .assignments-header {
+            display: flex;
+            align-items: center;
+            justify-content: between;
+            margin-bottom: 16px;
+        }
+
+        .assignments-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #2d3748;
+        }
+
+        .assignments-count {
+            background: #667eea;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 10px;
+            font-weight: 600;
+        }
+
+        .assignment-card {
+            background: white;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-left: 4px solid;
+            position: relative;
+        }
+
+        .assignment-card.homework { border-left-color: #3b82f6; }
+        .assignment-card.project { border-left-color: #8b5cf6; }
+        .assignment-card.quiz { border-left-color: #22c55e; }
+        .assignment-card.exam { border-left-color: #ef4444; }
+
+        .assignment-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: between;
+            margin-bottom: 12px;
+        }
+
+        .assignment-info {
+            flex: 1;
+        }
+
+        .assignment-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 4px;
+        }
+
+        .assignment-meta {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+
+        .assignment-badge {
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 10px;
+            font-weight: 600;
+            color: white;
+        }
+
+        .badge-homework { background: #3b82f6; }
+        .badge-project { background: #8b5cf6; }
+        .badge-quiz { background: #22c55e; }
+        .badge-exam { background: #ef4444; }
+
+        .assignment-subject {
+            font-size: 11px;
+            color: #718096;
+        }
+
+        .assignment-description {
+            font-size: 12px;
+            color: #4a5568;
+            margin-bottom: 12px;
+            line-height: 1.5;
+        }
+
+        .assignment-stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .stat-item {
+            background: #f7fafc;
+            padding: 8px;
+            border-radius: 6px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 13px;
+            font-weight: 600;
+            color: #2d3748;
+        }
+
+        .stat-label {
+            font-size: 9px;
+            color: #718096;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .progress-bar {
+            background: #e2e8f0;
+            height: 4px;
+            border-radius: 2px;
+            overflow: hidden;
+            margin-bottom: 12px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #22c55e 0%, #16a34a 100%);
+            transition: width 0.3s ease;
+        }
+
+        .assignment-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .action-menu {
+            position: relative;
+            margin-left: auto;
+        }
+
+        .action-menu-btn {
+            background: #f7fafc;
+            border: 1px solid #e2e8f0;
+            padding: 6px 8px;
+            border-radius: 6px;
+            font-size: 12px;
+            color: #718096;
+            cursor: pointer;
+        }
+
+        .action-menu-dropdown {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+            min-width: 150px;
+            z-index: 10;
+            display: none;
+        }
+
+        .action-menu.active .action-menu-dropdown {
+            display: block;
+        }
+
+        .action-menu-item {
+            padding: 8px 12px;
+            font-size: 12px;
+            color: #4a5568;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border-bottom: 1px solid #f7fafc;
+        }
+
+        .action-menu-item:hover {
+            background: #f7fafc;
+        }
+
+        .action-menu-item.danger {
+            color: #e53e3e;
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+        }
+
+        .empty-icon {
+            font-size: 48px;
+            color: #a0aec0;
+            margin-bottom: 16px;
+        }
+
+        .empty-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #4a5568;
+            margin-bottom: 8px;
+        }
+
+        .empty-text {
+            font-size: 12px;
+            color: #718096;
+            margin-bottom: 20px;
+        }
+
+        /* Loading State */
+        .loading-state {
+            text-align: center;
+            padding: 40px 20px;
+        }
+
+        .loading-spinner {
+            width: 32px;
+            height: 32px;
+            border: 3px solid #e2e8f0;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 16px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Responsive */
+        @media (max-width: 480px) {
+            .form-row {
                 grid-template-columns: 1fr;
             }
             
-            .btn-modern {
-                justify-content: center;
-                margin-bottom: 0.5rem;
+            .assignment-stats {
+                grid-template-columns: repeat(2, 1fr);
             }
+        }
+
+        /* Bottom padding for navigation */
+        .assignments-list {
+            padding-bottom: 100px;
         }
     </style>
 </head>
 <body>
-    <div class="d-flex">
-        <div class="main-content">
-            <!-- Page Header -->
-            <div class="page-header">
+    <?php include '../include/loader.php'; ?>
+
+    <div class="app-container">
+        <!-- Page Header -->
+        <div class="page-header">
+            <div class="header-top">
+                <a href="index.php" class="back-btn">
+                    <i class="fas fa-arrow-left"></i>
+                </a>
                 <h1 class="page-title">
-                    <i class="fas fa-tasks me-3"></i>
-                    Manage Assignments
+                    <i class="fas fa-tasks me-2"></i>
+                    Assignments
                 </h1>
-                <p class="page-subtitle">Create, manage, and track assignments for your classes</p>
+            </div>
+            <p class="page-subtitle">Create and manage assignments for your classes</p>
+            <div class="header-actions">
+                <button class="header-btn" onclick="toggleCreateForm()">
+                    <i class="fas fa-plus"></i>
+                    Create New
+                </button>
+                <a href="assignment_analytics.php" class="header-btn">
+                    <i class="fas fa-chart-bar"></i>
+                    Analytics
+                </a>
+            </div>
+        </div>
+
+        <!-- Message Display -->
+        <?php if ($msg): ?>
+        <div class="message-container">
+            <?= $msg ?>
+        </div>
+        <?php endif; ?>
+
+        <!-- Create Assignment Form -->
+        <div class="form-section">
+            <div class="form-toggle collapsed" id="createForm">
+                <div class="form-toggle-header" onclick="toggleCreateForm()">
+                    <h5 class="form-toggle-title">
+                        <i class="fas fa-plus-circle me-2"></i>
+                        Create New Assignment
+                    </h5>
+                    <i class="fas fa-chevron-down form-toggle-icon"></i>
+                </div>
+                <div class="form-toggle-body">
+                    <form method="post" enctype="multipart/form-data">
+                        <div class="form-group">
+                            <label class="form-label">Subject & Class</label>
+                            <select name="subject_id" class="form-select" required>
+                                <option value="">-- Select Subject --</option>
+                                <?php foreach ($subjects as $subject): ?>
+                                <option value="<?= $subject['id'] ?>">
+                                    <?= htmlspecialchars($subject['subject_name']) ?> 
+                                    (<?= htmlspecialchars($subject['class_name']) ?>)
+                                </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Assignment Type</label>
+                            <select name="assignment_type" class="form-select" required>
+                                <option value="homework">📘 Homework</option>
+                                <option value="project">🟣 Project</option>
+                                <option value="quiz">🟢 Quiz</option>
+                                <option value="exam">🔴 Exam</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Assignment Title</label>
+                            <input type="text" name="title" class="form-input" required placeholder="Enter assignment title">
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Description</label>
+                            <textarea name="description" class="form-textarea" required placeholder="Describe the assignment"></textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Instructions (Optional)</label>
+                            <textarea name="instructions" class="form-textarea" placeholder="Additional instructions for students"></textarea>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">Due Date</label>
+                                <input type="date" name="due_date" class="form-input" required min="<?= date('Y-m-d', strtotime('+1 day')) ?>">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Max Marks</label>
+                                <input type="number" name="max_marks" class="form-input" required min="1" max="1000" value="100">
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Attachment (Optional)</label>
+                            <div class="file-upload" onclick="document.getElementById('attachment').click()">
+                                <div class="file-upload-icon">
+                                    <i class="fas fa-cloud-upload-alt"></i>
+                                </div>
+                                <div class="file-upload-text">Click to upload file</div>
+                                <div class="file-upload-hint">PDF, DOC, Images (Max 10MB)</div>
+                            </div>
+                            <input type="file" id="attachment" name="attachment" style="display: none;" accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png,.gif">
+                        </div>
+
+                        <button type="submit" class="btn btn-primary btn-full">
+                            <i class="fas fa-plus"></i>
+                            Create Assignment
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Assignments List -->
+        <div class="assignments-list">
+            <div class="assignments-header">
+                <h2 class="assignments-title">My Assignments</h2>
+                <span class="assignments-count"><?= count($assignments) ?></span>
             </div>
 
-            <!-- Alert Messages -->
-            <?= $msg ?>
-
-            <div class="row">
-                <!-- Create Assignment Form -->
-                <div class="col-lg-4">
-                    <div class="modern-card">
-                        <div class="card-header-modern">
-                            <h5>
-                                <i class="fas fa-plus-circle me-2"></i>
-                                Create New Assignment
-                            </h5>
+            <?php if (empty($assignments)): ?>
+            <div class="empty-state">
+                <div class="empty-icon">
+                    <i class="fas fa-tasks"></i>
+                </div>
+                <h6 class="empty-title">No Assignments Yet</h6>
+                <p class="empty-text">Create your first assignment to get started with managing student work.</p>
+                <button class="btn btn-primary" onclick="toggleCreateForm()">
+                    <i class="fas fa-plus"></i>
+                    Create Assignment
+                </button>
+            </div>
+            <?php else: ?>
+            <?php foreach ($assignments as $assignment): ?>
+            <div class="assignment-card <?= $assignment['assignment_type'] ?>">
+                <div class="assignment-header">
+                    <div class="assignment-info">
+                        <h6 class="assignment-title"><?= htmlspecialchars($assignment['title']) ?></h6>
+                        <div class="assignment-meta">
+                            <span class="assignment-badge badge-<?= $assignment['assignment_type'] ?>">
+                                <?= htmlspecialchars(ucfirst($assignment['assignment_type'])) ?>
+                            </span>
+                            <span class="assignment-subject">
+                                <?= htmlspecialchars($assignment['subject_name']) ?> - <?= htmlspecialchars($assignment['class_name']) ?>
+                            </span>
                         </div>
-                        <div class="card-body">
-                            <form method="post" enctype="multipart/form-data">
-                                <div class="mb-3">
-                                    <label class="form-label">Subject & Class</label>
-                                    <select name="subject_id" class="form-select form-control-modern" required>
-                                        <option value="">-- Select Subject --</option>
-                                        <?php foreach ($subjects as $subject): ?>
-                                        <option value="<?= $subject['id'] ?>">
-                                            <?= htmlspecialchars($subject['subject_name']) ?> 
-                                            (<?= htmlspecialchars($subject['class_name']) ?>)
-                                        </option>
-                                        <?php endforeach; ?>
-                                    </select>
-                                </div>
-
-                                <div class="mb-3">
-                                    <label class="form-label">Assignment Type</label>
-                                    <select name="assignment_type" class="form-select form-control-modern" required>
-                                        <option value="homework">Homework</option>
-                                        <option value="project">Project</option>
-                                        <option value="quiz">Quiz</option>
-                                        <option value="exam">Exam</option>
-                                    </select>
-                                </div>
-
-                                <div class="mb-3">
-                                    <label class="form-label">Title</label>
-                                    <input type="text" name="title" class="form-control form-control-modern" required placeholder="Enter assignment title">
-                                </div>
-
-                                <div class="mb-3">
-                                    <label class="form-label">Description</label>
-                                    <textarea name="description" class="form-control form-control-modern" rows="3" required placeholder="Describe the assignment"></textarea>
-                                </div>
-
-                                <div class="mb-3">
-                                    <label class="form-label">Instructions</label>
-                                    <textarea name="instructions" class="form-control form-control-modern" rows="2" placeholder="Additional instructions for students"></textarea>
-                                </div>
-
-                                <div class="row">
-                                    <div class="col-md-6 mb-3">
-                                        <label class="form-label">Due Date</label>
-                                        <input type="date" name="due_date" class="form-control form-control-modern" required min="<?= date('Y-m-d', strtotime('+1 day')) ?>">
-                                    </div>
-                                    <div class="col-md-6 mb-3">
-                                        <label class="form-label">Maximum Marks</label>
-                                        <input type="number" name="max_marks" class="form-control form-control-modern" required min="1" max="1000" value="100">
-                                    </div>
-                                </div>
-
-                                <div class="mb-3">
-                                    <label class="form-label">Attachment (Optional)</label>
-                                    <div class="file-upload-area" onclick="document.getElementById('attachment').click()">
-                                        <i class="fas fa-cloud-upload-alt fa-2x text-muted mb-2"></i>
-                                        <p class="text-muted mb-0">Click to upload or drag and drop</p>
-                                        <small class="text-muted">PDF, DOC, DOCX, TXT, Images (Max 10MB)</small>
-                                    </div>
-                                    <input type="file" id="attachment" name="attachment" class="d-none" accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png,.gif">
-                                </div>
-
-                                <button type="submit" class="btn btn-primary-modern btn-modern w-100">
-                                    <i class="fas fa-plus"></i>
-                                    Create Assignment
+                    </div>
+                    <div class="action-menu">
+                        <button class="action-menu-btn" onclick="toggleActionMenu(this)">
+                            <i class="fas fa-ellipsis-v"></i>
+                        </button>
+                        <div class="action-menu-dropdown">
+                            <a href="view_submissions.php?id=<?= $assignment['id'] ?>" class="action-menu-item">
+                                <i class="fas fa-eye"></i>View Submissions
+                            </a>
+                            <a href="edit_assignment.php?id=<?= $assignment['id'] ?>" class="action-menu-item">
+                                <i class="fas fa-edit"></i>Edit Assignment
+                            </a>
+                            <form method="post" style="margin: 0;" onsubmit="return confirm('Delete this assignment?')">
+                                <input type="hidden" name="assignment_id" value="<?= $assignment['id'] ?>">
+                                <button type="submit" name="delete_assignment" class="action-menu-item danger" style="width: 100%; text-align: left; background: none; border: none;">
+                                    <i class="fas fa-trash"></i>Delete Assignment
                                 </button>
                             </form>
                         </div>
                     </div>
                 </div>
 
-                <!-- Assignments List -->
-                <div class="col-lg-8">
-                    <div class="modern-card">
-                        <div class="card-header-modern">
-                            <h5>
-                                <i class="fas fa-list me-2"></i>
-                                My Assignments (<?= count($assignments) ?>)
-                            </h5>
-                        </div>
-                        <div class="card-body">
-                            <?php if (empty($assignments)): ?>
-                            <div class="text-center py-5">
-                                <i class="fas fa-tasks fa-4x text-muted mb-3"></i>
-                                <h5 class="text-muted">No assignments created yet</h5>
-                                <p class="text-muted">Create your first assignment using the form on the left.</p>
-                            </div>
-                            <?php else: ?>
-                            <?php foreach ($assignments as $assignment): ?>
-                            <div class="assignment-card <?= $assignment['assignment_type'] ?>">
-                                <div class="d-flex justify-content-between align-items-start mb-2">
-                                    <div>
-                                        <h6 class="mb-1"><?= htmlspecialchars($assignment['title']) ?></h6>
-                                        <div class="d-flex gap-2 align-items-center">
-                                            <span class="badge badge-modern badge-type-<?= $assignment['assignment_type'] ?>">
-                                                <?= htmlspecialchars(ucfirst($assignment['assignment_type'])) ?>
-                                            </span>
-                                            <small class="text-muted">
-                                                <?= htmlspecialchars($assignment['subject_name']) ?> - <?= htmlspecialchars($assignment['class_name']) ?>
-                                            </small>
-                                        </div>
-                                    </div>
-                                    <div class="dropdown">
-                                        <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                                            <i class="fas fa-ellipsis-v"></i>
-                                        </button>
-                                        <ul class="dropdown-menu">
-                                            <li><a class="dropdown-item" href="view_submissions.php?id=<?= $assignment['id'] ?>">
-                                                <i class="fas fa-eye me-2"></i>View Submissions
-                                            </a></li>
-                                            <li><a class="dropdown-item" href="edit_assignment.php?id=<?= $assignment['id'] ?>">
-                                                <i class="fas fa-edit me-2"></i>Edit Assignment
-                                            </a></li>
-                                            <li><hr class="dropdown-divider"></li>
-                                            <li>
-                                                <form method="post" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this assignment?')">
-                                                    <input type="hidden" name="assignment_id" value="<?= $assignment['id'] ?>">
-                                                    <button type="submit" name="delete_assignment" class="dropdown-item text-danger">
-                                                        <i class="fas fa-trash me-2"></i>Delete Assignment
-                                                    </button>
-                                                </form>
-                                            </li>
-                                        </ul>
-                                    </div>
-                                </div>
+                <p class="assignment-description"><?= htmlspecialchars($assignment['description']) ?></p>
 
-                                <p class="text-muted mb-3"><?= htmlspecialchars($assignment['description']) ?></p>
-
-                                <div class="assignment-meta">
-                                    <div class="meta-item">
-                                        <div class="meta-label">Due Date</div>
-                                        <div class="meta-value"><?= htmlspecialchars(date('M d, Y', strtotime($assignment['due_date']))) ?></div>
-                                    </div>
-                                    <div class="meta-item">
-                                        <div class="meta-label">Max Marks</div>
-                                        <div class="meta-value"><?= htmlspecialchars($assignment['max_marks']) ?></div>
-                                    </div>
-                                    <div class="meta-item">
-                                        <div class="meta-label">Submissions</div>
-                                        <div class="meta-value"><?= $assignment['submissions'] ?>/<?= $assignment['total_students'] ?></div>
-                                    </div>
-                                    <div class="meta-item">
-                                        <div class="meta-label">Created</div>
-                                        <div class="meta-value"><?= htmlspecialchars(date('M d', strtotime($assignment['created_at']))) ?></div>
-                                    </div>
-                                </div>
-
-                                <!-- Submission Progress -->
-                                <div class="mb-3">
-                                    <div class="d-flex justify-content-between align-items-center mb-1">
-                                        <small class="text-muted">Submission Progress</small>
-                                        <small class="text-muted">
-                                            <?= $assignment['total_students'] > 0 ? round(($assignment['submissions'] / $assignment['total_students']) * 100) : 0 ?>%
-                                        </small>
-                                    </div>
-                                    <div class="progress-modern">
-                                        <div class="progress-bar-modern" style="width: <?= $assignment['total_students'] > 0 ? ($assignment['submissions'] / $assignment['total_students']) * 100 : 0 ?>%"></div>
-                                    </div>
-                                </div>
-
-                                <?php if ($assignment['attachment_url']): ?>
-                                <div class="mb-3">
-                                    <small class="text-muted">
-                                        <i class="fas fa-paperclip me-1"></i>
-                                        <a href="../<?= htmlspecialchars($assignment['attachment_url']) ?>" target="_blank" class="text-decoration-none">
-                                            View Attachment
-                                        </a>
-                                    </small>
-                                </div>
-                                <?php endif; ?>
-
-                                <div class="d-flex gap-2 flex-wrap">
-                                    <a href="view_submissions.php?id=<?= $assignment['id'] ?>" class="btn btn-sm btn-info-modern btn-modern">
-                                        <i class="fas fa-eye"></i>
-                                        View Submissions (<?= $assignment['submissions'] ?>)
-                                    </a>
-                                    <a href="edit_assignment.php?id=<?= $assignment['id'] ?>" class="btn btn-sm btn-warning-modern btn-modern">
-                                        <i class="fas fa-edit"></i>
-                                        Edit
-                                    </a>
-                                </div>
-                            </div>
-                            <?php endforeach; ?>
-                            <?php endif; ?>
-                        </div>
+                <div class="assignment-stats">
+                    <div class="stat-item">
+                        <div class="stat-value"><?= htmlspecialchars(date('M d', strtotime($assignment['due_date']))) ?></div>
+                        <div class="stat-label">Due Date</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value"><?= htmlspecialchars($assignment['max_marks']) ?></div>
+                        <div class="stat-label">Max Marks</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value"><?= $assignment['submissions'] ?>/<?= $assignment['total_students'] ?></div>
+                        <div class="stat-label">Submitted</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value"><?= htmlspecialchars(date('M d', strtotime($assignment['created_at']))) ?></div>
+                        <div class="stat-label">Created</div>
                     </div>
                 </div>
+
+                <!-- Submission Progress -->
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: <?= $assignment['total_students'] > 0 ? ($assignment['submissions'] / $assignment['total_students']) * 100 : 0 ?>%"></div>
+                </div>
+
+                <?php if ($assignment['attachment_url']): ?>
+                <div style="margin-bottom: 12px;">
+                    <a href="../<?= htmlspecialchars($assignment['attachment_url']) ?>" target="_blank" style="font-size: 11px; color: #667eea; text-decoration: none;">
+                        <i class="fas fa-paperclip me-1"></i>View Attachment
+                    </a>
+                </div>
+                <?php endif; ?>
+
+                <div class="assignment-actions">
+                    <a href="view_submissions.php?id=<?= $assignment['id'] ?>" class="btn btn-info btn-sm">
+                        <i class="fas fa-eye"></i>
+                        Submissions (<?= $assignment['submissions'] ?>)
+                    </a>
+                    <a href="edit_assignment.php?id=<?= $assignment['id'] ?>" class="btn btn-warning btn-sm">
+                        <i class="fas fa-edit"></i>
+                        Edit
+                    </a>
+                </div>
             </div>
+            <?php endforeach; ?>
+            <?php endif; ?>
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Include Bottom Navigation -->
+    <?php include '../include/bootoomnav.php'; ?>
+
     <script>
-        // File upload drag and drop functionality
-        const fileUploadArea = document.querySelector('.file-upload-area');
-        const fileInput = document.getElementById('attachment');
-
-        fileUploadArea.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            fileUploadArea.classList.add('dragover');
-        });
-
-        fileUploadArea.addEventListener('dragleave', () => {
-            fileUploadArea.classList.remove('dragover');
-        });
-
-        fileUploadArea.addEventListener('drop', (e) => {
-            e.preventDefault();
-            fileUploadArea.classList.remove('dragover');
-            
-            const files = e.dataTransfer.files;
-            if (files.length > 0) {
-                fileInput.files = files;
-                updateFileUploadText(files[0].name);
-            }
-        });
-
-        fileInput.addEventListener('change', (e) => {
-            if (e.target.files.length > 0) {
-                updateFileUploadText(e.target.files[0].name);
-            }
-        });
-
-        function updateFileUploadText(filename) {
-            const uploadArea = document.querySelector('.file-upload-area');
-            uploadArea.innerHTML = `
-                <i class="fas fa-file fa-2x text-success mb-2"></i>
-                <p class="text-success mb-0">${filename}</p>
-                <small class="text-muted">Click to change file</small>
-            `;
+        function toggleCreateForm() {
+            const form = document.getElementById('createForm');
+            form.classList.toggle('collapsed');
         }
+
+        function toggleActionMenu(button) {
+            const menu = button.parentElement;
+            const isActive = menu.classList.contains('active');
+            
+            // Close all menus
+            document.querySelectorAll('.action-menu').forEach(m => m.classList.remove('active'));
+            
+            // Toggle current menu
+            if (!isActive) {
+                menu.classList.add('active');
+            }
+        }
+
+        // Close menus when clicking outside
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.action-menu')) {
+                document.querySelectorAll('.action-menu').forEach(m => m.classList.remove('active'));
+            }
+        });
+
+        // File upload handling
+        document.getElementById('attachment').addEventListener('change', function(e) {
+            if (e.target.files.length > 0) {
+                const fileName = e.target.files[0].name;
+                const uploadArea = document.querySelector('.file-upload');
+                uploadArea.innerHTML = `
+                    <div class="file-upload-icon" style="color: #22c55e;">
+                        <i class="fas fa-file"></i>
+                    </div>
+                    <div class="file-upload-text" style="color: #22c55e;">${fileName}</div>
+                    <div class="file-upload-hint">Click to change file</div>
+                `;
+            }
+        });
 
         // Auto-dismiss alerts
         setTimeout(() => {
