@@ -24,62 +24,114 @@ $type_filter = $_GET['type'] ?? '';
 
 // Handle file upload
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['action'] == 'upload_resource') {
-    $title = $_POST['title'];
-    $description = $_POST['description'];
+    $title = trim($_POST['title']);
+    $description = trim($_POST['description']);
     $resource_type = $_POST['resource_type'];
-    $class_id = $_POST['class_id'];
-    $subject_id = $_POST['subject_id'];
-    $external_url = $_POST['external_url'] ?? '';
-    $tags = $_POST['tags'] ?? '';
+    $external_url = trim($_POST['external_url']) ?: null;
+    $tags = trim($_POST['tags']) ?: null;
     $is_public = isset($_POST['is_public']) ? 1 : 0;
     
-    $file_url = '';
-    $file_size = 0;
-    $file_format = '';
+    // Handle class_id and subject_id - convert empty strings to NULL
+    $class_id = !empty($_POST['class_id']) ? intval($_POST['class_id']) : null;
+    $subject_id = !empty($_POST['subject_id']) ? intval($_POST['subject_id']) : null;
     
-    // Handle file upload
-    if (isset($_FILES['resource_file']) && $_FILES['resource_file']['error'] == 0) {
-        $upload_dir = '../uploads/resources/';
-        if (!is_dir($upload_dir)) {
-            mkdir($upload_dir, 0755, true);
+    // Validate that if class_id or subject_id is provided, it belongs to the teacher
+    if ($class_id !== null || $subject_id !== null) {
+        $validation_conditions = ["cst.teacher_id = ?"];
+        $validation_params = [$user['id']];
+        
+        if ($class_id !== null) {
+            $validation_conditions[] = "c.id = ?";
+            $validation_params[] = $class_id;
         }
         
-        $file_extension = pathinfo($_FILES['resource_file']['name'], PATHINFO_EXTENSION);
-        $file_name = uniqid() . '.' . $file_extension;
-        $file_path = $upload_dir . $file_name;
+        if ($subject_id !== null) {
+            $validation_conditions[] = "s.id = ?";
+            $validation_params[] = $subject_id;
+        }
         
-        if (move_uploaded_file($_FILES['resource_file']['tmp_name'], $file_path)) {
-            $file_url = 'uploads/resources/' . $file_name;
-            $file_size = $_FILES['resource_file']['size'];
-            $file_format = $file_extension;
+        $validation_where = implode(' AND ', $validation_conditions);
+        
+        $validation_stmt = $pdo->prepare("SELECT COUNT(*) as count
+                                         FROM classes c
+                                         JOIN class_subject_teachers cst ON c.id = cst.class_id
+                                         JOIN subjects s ON cst.subject_id = s.id
+                                         WHERE $validation_where AND cst.is_active = 1");
+        $validation_stmt->execute($validation_params);
+        $validation_result = $validation_stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if ($validation_result['count'] == 0) {
+            $msg = "<div class='alert alert-danger'>Invalid class or subject selection. Please select from your assigned classes and subjects.</div>";
         }
     }
     
-    try {
-        $stmt = $pdo->prepare("INSERT INTO learning_resources 
-                              (title, description, resource_type, file_url, external_url, file_size, file_format,
-                               class_id, subject_id, uploaded_by, is_public, tags)
-                              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-        $stmt->execute([
-            $title, $description, $resource_type, $file_url, $external_url, $file_size, $file_format,
-            $class_id, $subject_id, $user['id'], $is_public, $tags
-        ]);
+    if (empty($msg)) {
+        $file_url = null;
+        $file_size = 0;
+        $file_format = null;
         
-        $msg = "<div class='alert alert-success'>Resource uploaded successfully!</div>";
-        
-        // Log activity
-        if (function_exists('logActivity')) {
-            logActivity($pdo, 'resource_uploaded', 'learning_resources', $pdo->lastInsertId());
+        // Handle file upload
+        if (isset($_FILES['resource_file']) && $_FILES['resource_file']['error'] == 0) {
+            $upload_dir = '../uploads/resources/';
+            if (!is_dir($upload_dir)) {
+                mkdir($upload_dir, 0755, true);
+            }
+            
+            $allowed_extensions = ['pdf', 'doc', 'docx', 'ppt', 'pptx', 'xls', 'xlsx', 'jpg', 'jpeg', 'png', 'gif', 'mp4', 'mp3', 'zip'];
+            $file_extension = strtolower(pathinfo($_FILES['resource_file']['name'], PATHINFO_EXTENSION));
+            
+            if (!in_array($file_extension, $allowed_extensions)) {
+                $msg = "<div class='alert alert-danger'>Invalid file type. Please upload a supported file format.</div>";
+            } elseif ($_FILES['resource_file']['size'] > 50 * 1024 * 1024) { // 50MB limit
+                $msg = "<div class='alert alert-danger'>File size too large. Maximum size is 50MB.</div>";
+            } else {
+                $file_name = uniqid() . '.' . $file_extension;
+                $file_path = $upload_dir . $file_name;
+                
+                if (move_uploaded_file($_FILES['resource_file']['tmp_name'], $file_path)) {
+                    $file_url = 'uploads/resources/' . $file_name;
+                    $file_size = $_FILES['resource_file']['size'];
+                    $file_format = $file_extension;
+                } else {
+                    $msg = "<div class='alert alert-danger'>Failed to upload file. Please try again.</div>";
+                }
+            }
         }
         
-    } catch (PDOException $e) {
-        $msg = "<div class='alert alert-danger'>Error uploading resource: " . htmlspecialchars($e->getMessage()) . "</div>";
+        // Validate that at least one resource (file or URL) is provided
+        if (empty($msg) && empty($file_url) && empty($external_url)) {
+            $msg = "<div class='alert alert-danger'>Please provide either a file upload or an external URL.</div>";
+        }
+        
+        if (empty($msg)) {
+            try {
+                $stmt = $pdo->prepare("INSERT INTO learning_resources 
+                                      (title, description, resource_type, file_url, external_url, file_size, file_format,
+                                       class_id, subject_id, uploaded_by, is_public, tags, created_at)
+                                      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())");
+                $stmt->execute([
+                    $title, $description, $resource_type, $file_url, $external_url, $file_size, $file_format,
+                    $class_id, $subject_id, $user['id'], $is_public, $tags
+                ]);
+                
+                $msg = "<div class='alert alert-success'>Resource uploaded successfully!</div>";
+                
+                // Log activity
+                if (function_exists('logActivity')) {
+                    logActivity($pdo, 'resource_uploaded', 'learning_resources', $pdo->lastInsertId());
+                }
+                
+            } catch (PDOException $e) {
+                error_log("Resource upload error: " . $e->getMessage());
+                $msg = "<div class='alert alert-danger'>Error uploading resource. Please try again.</div>";
+            }
+        }
     }
 }
 
 // Handle resource deletion
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['action'] == 'delete_resource') {
-    $resource_id = $_POST['resource_id'];
+    $resource_id = intval($_POST['resource_id']);
     
     try {
         // Get resource info first
@@ -98,14 +150,17 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['a
             $stmt->execute([$resource_id, $user['id']]);
             
             $msg = "<div class='alert alert-success'>Resource deleted successfully!</div>";
+        } else {
+            $msg = "<div class='alert alert-danger'>Resource not found or you don't have permission to delete it.</div>";
         }
         
     } catch (PDOException $e) {
-        $msg = "<div class='alert alert-danger'>Error deleting resource: " . htmlspecialchars($e->getMessage()) . "</div>";
+        error_log("Resource deletion error: " . $e->getMessage());
+        $msg = "<div class='alert alert-danger'>Error deleting resource. Please try again.</div>";
     }
 }
 
-// Get resources
+// Get resources with proper filtering
 $where_conditions = ["lr.uploaded_by = ?"];
 $params = [$user['id']];
 
@@ -126,7 +181,11 @@ if ($type_filter) {
 
 $where_clause = implode(' AND ', $where_conditions);
 
-$stmt = $pdo->prepare("SELECT lr.*, c.class_name, c.section, s.subject_name
+$stmt = $pdo->prepare("SELECT lr.*, 
+                              c.class_name, 
+                              c.section, 
+                              s.subject_name,
+                              COALESCE(lr.download_count, 0) as download_count
                       FROM learning_resources lr
                       LEFT JOIN classes c ON lr.class_id = c.id
                       LEFT JOIN subjects s ON lr.subject_id = s.id
@@ -141,9 +200,18 @@ $stmt = $pdo->prepare("SELECT
                       COUNT(CASE WHEN resource_type = 'document' THEN 1 END) as documents,
                       COUNT(CASE WHEN resource_type = 'video' THEN 1 END) as videos,
                       COUNT(CASE WHEN resource_type = 'link' THEN 1 END) as links,
-                      SUM(download_count) as total_downloads
+                      COALESCE(SUM(download_count), 0) as total_downloads
                       FROM learning_resources 
                       WHERE uploaded_by = ?");
 $stmt->execute([$user['id']]);
 $stats = $stmt->fetch(PDO::FETCH_ASSOC);
+
+// Ensure stats have default values
+$stats = array_merge([
+    'total_resources' => 0,
+    'documents' => 0,
+    'videos' => 0,
+    'links' => 0,
+    'total_downloads' => 0
+], $stats ?: []);
 ?>

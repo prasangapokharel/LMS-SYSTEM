@@ -101,12 +101,6 @@ include_once '../App/Models/teacher/Message.php';
         padding: 1rem;
         border: 1px solid var(--color-gray-200);
         cursor: pointer;
-        transition: all 0.2s;
-    }
-    
-    .message-item:hover {
-        background: var(--color-white);
-        box-shadow: var(--shadow-sm);
     }
     
     .message-item.unread {
@@ -243,6 +237,34 @@ include_once '../App/Models/teacher/Message.php';
         color: var(--color-gray-500);
     }
     
+    .bulk-message-section {
+        background: var(--color-warning-light);
+        border: 1px solid var(--color-warning);
+        border-radius: 0.5rem;
+        padding: 1rem;
+        margin-bottom: 1rem;
+    }
+    
+    .bulk-message-title {
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: var(--color-warning-dark);
+        margin-bottom: 0.5rem;
+    }
+    
+    .class-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 0.5rem;
+    }
+    
+    .class-item {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.75rem;
+    }
+    
     @media (min-width: 768px) {
         .mobile-container {
             max-width: 1200px;
@@ -291,9 +313,32 @@ include_once '../App/Models/teacher/Message.php';
             <form method="post" class="compose-form">
                 <input type="hidden" name="action" value="send_message">
                 
+                <!-- Bulk Messaging Section -->
+                <?php if (!empty($teacher_classes)): ?>
+                <div class="bulk-message-section">
+                    <div class="bulk-message-title">📢 Send to Entire Classes</div>
+                    <div class="class-grid">
+                        <?php foreach ($teacher_classes as $class): ?>
+                        <div class="class-item">
+                            <input type="checkbox" name="bulk_classes[]" value="<?= $class['id'] ?>" id="class_<?= $class['id'] ?>" onchange="toggleClassStudents(<?= $class['id'] ?>)">
+                            <label for="class_<?= $class['id'] ?>">
+                                <?= htmlspecialchars($class['class_name'] . ' ' . $class['section']) ?>
+                                <br><small>(<?= $class['student_count'] ?> students)</small>
+                            </label>
+                        </div>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+                <?php endif; ?>
+                
                 <div class="form-group">
                     <label class="form-label">Recipients *</label>
                     <div class="recipient-grid">
+                        <?php if (empty($students)): ?>
+                        <div style="text-align: center; color: var(--color-gray-500); padding: 1rem;">
+                            No students found. Make sure you are assigned to classes.
+                        </div>
+                        <?php else: ?>
                         <?php foreach ($students as $student): ?>
                         <div class="recipient-item">
                             <input type="checkbox" name="recipients[]" value="<?= $student['id'] ?>" id="student_<?= $student['id'] ?>">
@@ -303,6 +348,7 @@ include_once '../App/Models/teacher/Message.php';
                             </label>
                         </div>
                         <?php endforeach; ?>
+                        <?php endif; ?>
                     </div>
                     <div style="margin-top: 0.5rem;">
                         <button type="button" onclick="selectAllStudents()" class="btn btn-secondary" style="padding: 0.25rem 0.75rem; font-size: 0.75rem;">Select All</button>
@@ -404,9 +450,9 @@ include_once '../App/Models/teacher/Message.php';
     </div>
 </div>
 
+<!-- Include Bottom Navigation -->
+<?php include '../include/bottomnav.php'; ?>
 
-    <!-- Include Bottom Navigation -->
-    <?php include '../include/bootoomnav.php'; ?>
 <script>
 function showTab(tabName) {
     // Hide all tab contents
@@ -436,6 +482,19 @@ function clearAllStudents() {
     document.querySelectorAll('input[name="recipients[]"]').forEach(checkbox => {
         checkbox.checked = false;
     });
+}
+
+function toggleClassStudents(classId) {
+    const classCheckbox = document.getElementById('class_' + classId);
+    const studentCheckboxes = document.querySelectorAll('input[name="recipients[]"]');
+    
+    if (classCheckbox.checked) {
+        // Get students for this class and check them
+        // This would require AJAX to get class students, for now just select all
+        studentCheckboxes.forEach(checkbox => {
+            checkbox.checked = true;
+        });
+    }
 }
 
 function viewMessage(messageId) {

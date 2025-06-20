@@ -12,7 +12,7 @@ if ($current_role == 'student') {
         ['page' => 'assignments', 'icon' => 'book', 'label' => 'Tasks'],
         ['page' => 'attendance', 'icon' => 'calendar', 'label' => 'Attendance'],
         ['page' => 'leavenotice', 'icon' => 'calendar-days', 'label' => 'Leave'],
-        ['page' => 'profile', 'icon' => 'user', 'label' => 'Profile']
+        ['page' => 'menu', 'icon' => 'menu', 'label' => 'Menu']
     ];
 } elseif ($current_role == 'teacher') {
     $nav_items = [
@@ -67,13 +67,11 @@ function isNavActive($page) {
                             <line x1="16" x2="8" y1="13" y2="13"/>
                             <line x1="16" x2="8" y1="17" y2="17"/>
                         </svg>
-                    <?php elseif ($item['icon'] === 'users'): ?>
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-                            <circle cx="9" cy="7" r="4"/>
-                            <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-                            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-                        </svg>
+                    <?php elseif ($item['icon'] === 'menu'): ?>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="size-6">
+  <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.75a.75.75 0 1 1 0-1.5.75.75 0 0 1 0 1.5ZM12 12.75a.75.75 0 1 1 0-1.5.75.75 0 0 1 0 1.5ZM12 18.75a.75.75 0 1 1 0-1.5.75.75 0 0 1 0 1.5Z" />
+</svg>
+
                     <?php elseif ($item['icon'] === 'book'): ?>
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>

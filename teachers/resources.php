@@ -114,6 +114,16 @@ include_once '../App/Models/teacher/Resource.php';
         color: var(--color-warning);
     }
     
+    .resource-icon.audio {
+        background: var(--color-info-light);
+        color: var(--color-info);
+    }
+    
+    .resource-icon.presentation {
+        background: var(--color-secondary-light);
+        color: var(--color-secondary);
+    }
+    
     .resource-content {
         flex: 1;
         min-width: 0;
@@ -243,6 +253,7 @@ include_once '../App/Models/teacher/Resource.php';
         text-align: center;
         background: var(--color-gray-50);
         margin-bottom: 1rem;
+        cursor: pointer;
     }
     
     .upload-area.dragover {
@@ -254,6 +265,78 @@ include_once '../App/Models/teacher/Resource.php';
         text-align: center;
         padding: 3rem 1rem;
         color: var(--color-gray-500);
+        background: var(--color-white);
+        border-radius: 0.75rem;
+        box-shadow: var(--shadow-sm);
+    }
+    
+    .alert {
+        padding: 1rem;
+        border-radius: 0.5rem;
+        margin-bottom: 1rem;
+    }
+    
+    .alert-success {
+        background: var(--color-success-light);
+        color: var(--color-success-dark);
+        border: 1px solid var(--color-success);
+    }
+    
+    .alert-danger {
+        background: var(--color-danger-light);
+        color: var(--color-danger-dark);
+        border: 1px solid var(--color-danger);
+    }
+    
+    .modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 1000;
+    }
+    
+    .modal.show {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .modal-content {
+        background: white;
+        border-radius: 0.75rem;
+        max-width: 500px;
+        width: 90%;
+        max-height: 90vh;
+        overflow-y: auto;
+    }
+    
+    .modal-header {
+        padding: 1.5rem 1.5rem 0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .modal-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin: 0;
+    }
+    
+    .modal-close {
+        background: none;
+        border: none;
+        font-size: 1.5rem;
+        cursor: pointer;
+        color: var(--color-gray-500);
+    }
+    
+    .modal-body {
+        padding: 1.5rem;
     }
     
     @media (min-width: 768px) {
@@ -335,25 +418,43 @@ include_once '../App/Models/teacher/Resource.php';
             
             <div class="form-row">
                 <div class="form-group">
-                    <label class="form-label">Class</label>
+                    <label class="form-label">Class (Optional)</label>
                     <select name="class_id" class="form-select">
                         <option value="">All Classes</option>
-                        <?php foreach ($teacher_courses as $course): ?>
+                        <?php 
+                        $unique_classes = [];
+                        foreach ($teacher_courses as $course): 
+                            $class_key = $course['class_id'];
+                            if (!isset($unique_classes[$class_key])):
+                                $unique_classes[$class_key] = true;
+                        ?>
                         <option value="<?= $course['class_id'] ?>">
                             <?= htmlspecialchars($course['class_name'] . ' ' . $course['section']) ?>
                         </option>
-                        <?php endforeach; ?>
+                        <?php 
+                            endif;
+                        endforeach; 
+                        ?>
                     </select>
                 </div>
                 <div class="form-group">
-                    <label class="form-label">Subject</label>
+                    <label class="form-label">Subject (Optional)</label>
                     <select name="subject_id" class="form-select">
                         <option value="">All Subjects</option>
-                        <?php foreach ($teacher_courses as $course): ?>
+                        <?php 
+                        $unique_subjects = [];
+                        foreach ($teacher_courses as $course): 
+                            $subject_key = $course['subject_id'];
+                            if (!isset($unique_subjects[$subject_key])):
+                                $unique_subjects[$subject_key] = true;
+                        ?>
                         <option value="<?= $course['subject_id'] ?>">
                             <?= htmlspecialchars($course['subject_name']) ?>
                         </option>
-                        <?php endforeach; ?>
+                        <?php 
+                            endif;
+                        endforeach; 
+                        ?>
                     </select>
                 </div>
             </div>
@@ -369,7 +470,7 @@ include_once '../App/Models/teacher/Resource.php';
                     <input type="file" name="resource_file" id="fileInput" style="display: none;" accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.jpg,.jpeg,.png,.gif,.mp4,.mp3,.zip">
                     <div>📁 Click to select file or drag and drop</div>
                     <div style="font-size: 0.75rem; color: var(--color-gray-500); margin-top: 0.5rem;">
-                        Supported: PDF, DOC, PPT, XLS, Images, Videos, Audio, ZIP
+                        Supported: PDF, DOC, PPT, XLS, Images, Videos, Audio, ZIP (Max: 50MB)
                     </div>
                 </div>
                 <div id="fileName" style="margin-top: 0.5rem; font-size: 0.875rem; color: var(--color-gray-700);"></div>
@@ -378,6 +479,7 @@ include_once '../App/Models/teacher/Resource.php';
             <div class="form-group">
                 <label class="form-label">External URL (Optional)</label>
                 <input type="url" name="external_url" class="form-input" placeholder="https://example.com/resource">
+                <small style="color: var(--color-gray-500); font-size: 0.75rem;">Provide either a file upload or external URL</small>
             </div>
             
             <div class="form-group">
@@ -405,22 +507,40 @@ include_once '../App/Models/teacher/Resource.php';
                 <label class="form-label">Class</label>
                 <select name="class_id" class="form-select" onchange="this.form.submit()">
                     <option value="">All Classes</option>
-                    <?php foreach ($teacher_courses as $course): ?>
+                    <?php 
+                    $unique_classes = [];
+                    foreach ($teacher_courses as $course): 
+                        $class_key = $course['class_id'];
+                        if (!isset($unique_classes[$class_key])):
+                            $unique_classes[$class_key] = true;
+                    ?>
                     <option value="<?= $course['class_id'] ?>" <?= ($class_filter == $course['class_id']) ? 'selected' : '' ?>>
                         <?= htmlspecialchars($course['class_name'] . ' ' . $course['section']) ?>
                     </option>
-                    <?php endforeach; ?>
+                    <?php 
+                        endif;
+                    endforeach; 
+                    ?>
                 </select>
             </div>
             <div class="form-group">
                 <label class="form-label">Subject</label>
                 <select name="subject_id" class="form-select" onchange="this.form.submit()">
                     <option value="">All Subjects</option>
-                    <?php foreach ($teacher_courses as $course): ?>
+                    <?php 
+                    $unique_subjects = [];
+                    foreach ($teacher_courses as $course): 
+                        $subject_key = $course['subject_id'];
+                        if (!isset($unique_subjects[$subject_key])):
+                            $unique_subjects[$subject_key] = true;
+                    ?>
                     <option value="<?= $course['subject_id'] ?>" <?= ($subject_filter == $course['subject_id']) ? 'selected' : '' ?>>
                         <?= htmlspecialchars($course['subject_name']) ?>
                     </option>
-                    <?php endforeach; ?>
+                    <?php 
+                        endif;
+                    endforeach; 
+                    ?>
                 </select>
             </div>
             <div class="form-group">
@@ -429,8 +549,10 @@ include_once '../App/Models/teacher/Resource.php';
                     <option value="">All Types</option>
                     <option value="document" <?= ($type_filter == 'document') ? 'selected' : '' ?>>Documents</option>
                     <option value="video" <?= ($type_filter == 'video') ? 'selected' : '' ?>>Videos</option>
+                    <option value="audio" <?= ($type_filter == 'audio') ? 'selected' : '' ?>>Audio</option>
                     <option value="link" <?= ($type_filter == 'link') ? 'selected' : '' ?>>Links</option>
                     <option value="image" <?= ($type_filter == 'image') ? 'selected' : '' ?>>Images</option>
+                    <option value="presentation" <?= ($type_filter == 'presentation') ? 'selected' : '' ?>>Presentations</option>
                 </select>
             </div>
         </form>
@@ -470,10 +592,14 @@ include_once '../App/Models/teacher/Resource.php';
                 <div class="resource-meta">
                     <?php if ($resource['class_name']): ?>
                     <span>📚 <?= htmlspecialchars($resource['class_name'] . ' ' . $resource['section']) ?></span>
+                    <?php else: ?>
+                    <span>📚 All Classes</span>
                     <?php endif; ?>
                     
                     <?php if ($resource['subject_name']): ?>
                     <span>📖 <?= htmlspecialchars($resource['subject_name']) ?></span>
+                    <?php else: ?>
+                    <span>📖 All Subjects</span>
                     <?php endif; ?>
                     
                     <span>📅 <?= date('M j, Y', strtotime($resource['created_at'])) ?></span>
@@ -543,7 +669,6 @@ include_once '../App/Models/teacher/Resource.php';
         </div>
     </div>
 </div>
-
 
 <!-- Include Bottom Navigation -->
 <?php include '../include/bootoomnav.php'; ?>

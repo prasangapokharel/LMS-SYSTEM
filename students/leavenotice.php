@@ -68,6 +68,9 @@ $stmt = $pdo->prepare("SELECT * FROM leave_applications
                       ORDER BY applied_date DESC");
 $stmt->execute([$user['id']]);
 $leave_applications = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+include '../include/buffer.php';
+
 ?>
 
 <!DOCTYPE html>
