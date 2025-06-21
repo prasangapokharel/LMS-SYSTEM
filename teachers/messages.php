@@ -451,7 +451,7 @@ include_once '../App/Models/teacher/Message.php';
 </div>
 
 <!-- Include Bottom Navigation -->
-<?php include '../include/bottomnav.php'; ?>
+<?php include '../include/bootoomnav.php'; ?>
 
 <script>
 function showTab(tabName) {

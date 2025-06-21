@@ -675,7 +675,7 @@ include_once '../App/Models/teacher/Exam.php';
         </div>
     </div>
 
-    <?php include '../include/bottomnav.php'; ?>
+    <?php include '../include/bootoomnav.php'; ?>
 
     <script>
         function showCreateExamModal() {

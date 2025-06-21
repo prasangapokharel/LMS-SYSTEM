@@ -18,7 +18,7 @@ if ($current_role == 'student') {
     $nav_items = [
         ['page' => 'index', 'icon' => 'dashboard', 'label' => 'Dashboard'],
         ['page' => 'gradebook', 'icon' => 'book-open', 'label' => 'Gradebook'],
-        ['page' => 'courses', 'icon' => 'graduation-cap', 'label' => 'Courses'],
+        ['page' => 'notices', 'icon' => 'graduation-cap', 'label' => 'Notices'],
         ['page' => 'resources', 'icon' => 'folder', 'label' => 'Resources'],
         ['page' => 'menu', 'icon' => 'message-circle', 'label' => 'Menu']
     ];

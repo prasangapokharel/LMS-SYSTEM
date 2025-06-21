@@ -15,16 +15,20 @@ $stmt->execute([$user['id']]);
 $student_class = $stmt->fetch(PDO::FETCH_ASSOC);
 $class_id = $student_class ? $student_class['class_id'] : null;
 
-// Get exam schedules for student's class
+// Get exam schedules for student's class - prioritize nearest exams
 $query = "SELECT e.*, 
                  COUNT(es.id) as subject_count,
                  MIN(es.exam_date) as first_exam_date,
-                 MAX(es.exam_date) as last_exam_date
+                 MAX(es.exam_date) as last_exam_date,
+                 CASE 
+                     WHEN DATEDIFF(e.exam_date_start, CURDATE()) BETWEEN 0 AND 7 THEN 0
+                     ELSE 1
+                 END as priority_order
           FROM exams e
           LEFT JOIN exam_subjects es ON e.id = es.exam_id
           WHERE (e.status IN ('scheduled', 'completed') AND e.class_id = ?)
           GROUP BY e.id
-          ORDER BY e.exam_date_start ASC";
+          ORDER BY priority_order ASC, e.exam_date_start ASC";
 
 $stmt = $pdo->prepare($query);
 $stmt->execute([$class_id]);

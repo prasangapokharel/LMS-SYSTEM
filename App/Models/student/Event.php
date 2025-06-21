@@ -102,4 +102,20 @@ function getDaysUntilEvent($date) {
         return $diff->days . ' days';
     }
 }
+
+// Handle AJAX request for single event
+if (isset($_GET['action']) && $_GET['action'] === 'get_event' && isset($_GET['id'])) {
+    $stmt = $pdo->prepare("SELECT e.*, u.first_name, u.last_name, c.class_name, c.section, s.subject_name
+                          FROM events e
+                          JOIN users u ON e.created_by = u.id
+                          LEFT JOIN classes c ON e.class_id = c.id
+                          LEFT JOIN subjects s ON e.subject_id = s.id
+                          WHERE e.id = ?");
+    $stmt->execute([$_GET['id']]);
+    $event = $stmt->fetch(PDO::FETCH_ASSOC);
+    
+    header('Content-Type: application/json');
+    echo json_encode($event);
+    exit;
+}
 ?>

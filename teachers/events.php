@@ -570,7 +570,7 @@ include_once '../App/Models/teacher/Event.php';
 </div>
 
 <!-- Include Bottom Navigation -->
-<?php include '../include/bottomnav.php'; ?>
+<?php include '../include/bootoomnav.php'; ?>
 
 <script>
 // Image upload handling

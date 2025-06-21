@@ -1,340 +1,455 @@
 <?php
-include '../include/connect.php';
-include '../include/session.php';
-requireRole('principal');
 
-use Symfony\Component\Cache\Adapter\FilesystemAdapter;
-use GuzzleHttp\Client;
-
-// Initialize cache
-$cache = new FilesystemAdapter('user_management', 3600, __DIR__ . '/../cache');
-
-$user = getCurrentUser($pdo);
-$msg = "";
-
-// Handle form submissions
-if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    if (isset($_POST['action'])) {
-        $action = $_POST['action'];
-        
-        if ($action == 'create_teacher') {
-            // Validate inputs
-            $first_name = trim($_POST['first_name']);
-            $last_name = trim($_POST['last_name']);
-            $email = filter_var($_POST['email'], FILTER_SANITIZE_EMAIL);
-            $phone = preg_replace('/[^0-9]/', '', $_POST['phone']);
-            $address = $_POST['address'] ?? '';
-            
-            if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-                $msg = errorMessage("Invalid email address");
-            } elseif (strlen($phone) < 10) {
-                $msg = errorMessage("Phone number must be at least 10 digits");
-            } else {
-                // Generate teacher username and password
-                $teacher_count = $pdo->query("SELECT COUNT(*) FROM users WHERE role_id = 2")->fetchColumn();
-                $username = 'teacher' . str_pad($teacher_count + 1, 3, '0', STR_PAD_LEFT);
-                $password = generateStrongPassword(10);
-                $password_hash = password_hash($password, PASSWORD_DEFAULT);
-                
-                try {
-                    $stmt = $pdo->prepare("INSERT INTO users 
-                                          (username, email, password_hash, first_name, last_name, phone, address, role_id) 
-                                          VALUES (?, ?, ?, ?, ?, ?, ?, 2)");
-                    $stmt->execute([$username, $email, $password_hash, $first_name, $last_name, $phone, $address]);
-                    
-                    // Clear relevant caches
-                    $cache->deleteItem('user_stats');
-                    $cache->deleteItem('user_list_all');
-                    
-                    logActivity($pdo, 'teacher_created', 'users', $pdo->lastInsertId());
-                    $msg = successMessageWithCredentials(
-                        "Teacher created successfully!", 
-                        $username, 
-                        $password,
-                        "Please save these credentials and share with the teacher."
-                    );
-                } catch (PDOException $e) {
-                    $msg = errorMessage("Error creating teacher: " . $e->getMessage());
-                }
-            }
-        }
-        
-        elseif ($action == 'create_student') {
-            // Validate inputs
-            $first_name = trim($_POST['first_name']);
-            $last_name = trim($_POST['last_name']);
-            $email = filter_var($_POST['email'], FILTER_SANITIZE_EMAIL);
-            $phone = preg_replace('/[^0-9]/', '', $_POST['phone']);
-            $address = $_POST['address'] ?? '';
-            $class_id = (int)$_POST['class_id'];
-            $date_of_birth = $_POST['date_of_birth'];
-            $blood_group = $_POST['blood_group'] ?? '';
-            $guardian_name = trim($_POST['guardian_name']);
-            $guardian_phone = preg_replace('/[^0-9]/', '', $_POST['guardian_phone']);
-            $guardian_email = $_POST['guardian_email'] ?? '';
-            
-            if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-                $msg = errorMessage("Invalid student email address");
-            } elseif (strlen($phone) < 10) {
-                $msg = errorMessage("Student phone number must be at least 10 digits");
-            } elseif (strlen($guardian_phone) < 10) {
-                $msg = errorMessage("Guardian phone number must be at least 10 digits");
-            } else {
-                // Generate student ID and credentials
-                $current_year = date('Y');
-                $student_count = $pdo->query("SELECT COUNT(*) FROM students")->fetchColumn();
-                $student_id = 'STU' . $current_year . str_pad($student_count + 1, 3, '0', STR_PAD_LEFT);
-                $username = 'student' . str_pad($student_count + 1, 3, '0', STR_PAD_LEFT);
-                $password = generateStrongPassword(10);
-                $password_hash = password_hash($password, PASSWORD_DEFAULT);
-                
-                try {
-                    $pdo->beginTransaction();
-                    
-                    // Create user account
-                    $stmt = $pdo->prepare("INSERT INTO users 
-                                          (username, email, password_hash, first_name, last_name, phone, address, role_id) 
-                                          VALUES (?, ?, ?, ?, ?, ?, ?, 3)");
-                    $stmt->execute([$username, $email, $password_hash, $first_name, $last_name, $phone, $address]);
-                    $user_id = $pdo->lastInsertId();
-                    
-                    // Create student record
-                    $stmt = $pdo->prepare("INSERT INTO students 
-                                          (user_id, student_id, admission_date, date_of_birth, blood_group, 
-                                           guardian_name, guardian_phone, guardian_email) 
-                                          VALUES (?, ?, CURDATE(), ?, ?, ?, ?, ?)");
-                    $stmt->execute([$user_id, $student_id, $date_of_birth, $blood_group, $guardian_name, $guardian_phone, $guardian_email]);
-                    $student_db_id = $pdo->lastInsertId();
-                    
-                    // Get current academic year
-                    $stmt = $pdo->query("SELECT id FROM academic_years WHERE is_current = 1");
-                    $academic_year_id = $stmt->fetchColumn() ?: 1;
-                    
-                    // Enroll in class
-                    $stmt = $pdo->prepare("INSERT INTO student_enrollments 
-                                          (student_id, class_id, academic_year_id, enrollment_date, status) 
-                                          VALUES (?, ?, ?, CURDATE(), 'enrolled')");
-                    $stmt->execute([$student_db_id, $class_id, $academic_year_id]);
-                    
-                    // Also add to student_classes for compatibility
-                    $stmt = $pdo->prepare("INSERT INTO student_classes 
-                                          (student_id, class_id, academic_year_id, enrollment_date, status) 
-                                          VALUES (?, ?, ?, CURDATE(), 'enrolled')");
-                    $stmt->execute([$student_db_id, $class_id, $academic_year_id]);
-                    
-                    $pdo->commit();
-                    
-                    // Clear relevant caches
-                    $cache->deleteItem('user_stats');
-                    $cache->deleteItem('user_list_all');
-                    $cache->deleteItem('class_list');
-                    
-                    logActivity($pdo, 'student_created', 'students', $student_db_id);
-                    $msg = successMessageWithCredentials(
-                        "Student created successfully!", 
-                        $username, 
-                        $password,
-                        "Please save these credentials and share with the student/guardian.",
-                        $student_id
-                    );
-                } catch (PDOException $e) {
-                    $pdo->rollBack();
-                    $msg = errorMessage("Error creating student: " . $e->getMessage());
-                }
-            }
-        }
-        
-        elseif ($action == 'reset_password') {
-            $user_id = (int)$_POST['user_id'];
-            $new_password = generateStrongPassword(10);
-            $password_hash = password_hash($new_password, PASSWORD_DEFAULT);
-            
-            try {
-                $stmt = $pdo->prepare("UPDATE users SET password_hash = ? WHERE id = ?");
-                $stmt->execute([$password_hash, $user_id]);
-                
-                logActivity($pdo, 'password_reset', 'users', $user_id);
-                $msg = successMessageWithCredentials(
-                    "Password reset successfully!", 
-                    '', 
-                    $new_password,
-                    "Please share this new password with the user."
-                );
-            } catch (PDOException $e) {
-                $msg = errorMessage("Error resetting password: " . $e->getMessage());
-            }
-        }
-        
-        elseif ($action == 'toggle_status') {
-            $user_id = (int)$_POST['user_id'];
-            $new_status = (int)$_POST['new_status'];
-            
-            try {
-                $stmt = $pdo->prepare("UPDATE users SET is_active = ? WHERE id = ?");
-                $stmt->execute([$new_status, $user_id]);
-                
-                // Clear user list cache
-                $cache->deleteItem('user_list_all');
-                
-                $status_text = $new_status ? 'activated' : 'deactivated';
-                logActivity($pdo, 'user_' . $status_text, 'users', $user_id);
-                $msg = successMessage("User account has been {$status_text} successfully!");
-            } catch (PDOException $e) {
-                $msg = errorMessage("Error updating user status: " . $e->getMessage());
-            }
-        }
-    }
-}
-
-// Get filter parameters with sanitization
-$role_filter = isset($_GET['role']) ? preg_replace('/[^a-z]/', '', $_GET['role']) : 'all';
-$status_filter = isset($_GET['status']) ? preg_replace('/[^a-z]/', '', $_GET['status']) : 'all';
-$search = isset($_GET['search']) ? trim($_GET['search']) : '';
-
-// Try to get users from cache first
-$cacheKey = 'user_list_' . md5($role_filter . $status_filter . $search);
-$cachedUsers = $cache->getItem($cacheKey);
-
-if (!$cachedUsers->isHit()) {
-    // Build query
-    $where_conditions = [];
-    $params = [];
-
-    if ($role_filter != 'all') {
-        $where_conditions[] = "r.role_name = ?";
-        $params[] = $role_filter;
-    }
-
-    if ($status_filter != 'all') {
-        $where_conditions[] = "u.is_active = ?";
-        $params[] = $status_filter == 'active' ? 1 : 0;
-    }
-
-    if ($search) {
-        $where_conditions[] = "(u.first_name LIKE ? OR u.last_name LIKE ? OR u.username LIKE ? OR u.email LIKE ? OR s.student_id LIKE ?)";
-        $search_param = "%$search%";
-        $params = array_merge($params, [$search_param, $search_param, $search_param, $search_param, $search_param]);
-    }
-
-    $where_clause = !empty($where_conditions) ? 'WHERE ' . implode(' AND ', $where_conditions) : '';
-
-    // Get all users with their roles
-    $stmt = $pdo->prepare("SELECT u.*, r.role_name,
-                          CASE 
-                              WHEN r.role_name = 'student' THEN s.student_id
-                              ELSE NULL
-                          END as student_id,
-                          CASE 
-                              WHEN r.role_name = 'student' THEN c.class_name
-                              ELSE NULL
-                          END as class_name,
-                          CASE 
-                              WHEN r.role_name = 'student' THEN c.section
-                              ELSE NULL
-                          END as section
-                          FROM users u
-                          JOIN user_roles r ON u.role_id = r.id
-                          LEFT JOIN students s ON u.id = s.user_id
-                          LEFT JOIN student_enrollments se ON s.id = se.student_id AND se.status = 'enrolled'
-                          LEFT JOIN classes c ON se.class_id = c.id
-                          $where_clause
-                          ORDER BY r.role_name, u.first_name, u.last_name");
-    $stmt->execute($params);
-    $all_users = $stmt->fetchAll(PDO::FETCH_ASSOC);
+class HeadOfficeUser {
+    private $pdo;
+    private $cache;
     
-    // Cache for 5 minutes
-    $cachedUsers->set($all_users)->expiresAfter(300);
-    $cache->save($cachedUsers);
-} else {
-    $all_users = $cachedUsers->get();
-}
-
-// Get classes for student creation (with caching)
-$cachedClasses = $cache->getItem('class_list');
-if (!$cachedClasses->isHit()) {
-    $stmt = $pdo->query("SELECT id, class_name, section FROM classes WHERE is_active = 1 ORDER BY class_level, section");
-    $classes = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    $cachedClasses->set($classes)->expiresAfter(3600); // Cache for 1 hour
-    $cache->save($cachedClasses);
-} else {
-    $classes = $cachedClasses->get();
-}
-
-// Get statistics (with caching)
-$cachedStats = $cache->getItem('user_stats');
-if (!$cachedStats->isHit()) {
-    $stats = [
-        'total_users' => $pdo->query("SELECT COUNT(*) FROM users")->fetchColumn(),
-        'total_students' => $pdo->query("SELECT COUNT(*) FROM users WHERE role_id = 3")->fetchColumn(),
-        'total_teachers' => $pdo->query("SELECT COUNT(*) FROM users WHERE role_id = 2")->fetchColumn(),
-        'active_users' => $pdo->query("SELECT COUNT(*) FROM users WHERE is_active = 1")->fetchColumn()
-    ];
-    $cachedStats->set($stats)->expiresAfter(3600); // Cache for 1 hour
-    $cache->save($cachedStats);
-} else {
-    $stats = $cachedStats->get();
-}
-
-// Helper functions
-function generateStrongPassword($length = 10) {
-    $chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()';
-    $password = '';
-    for ($i = 0; $i < $length; $i++) {
-        $password .= $chars[random_int(0, strlen($chars) - 1)];
+    public function __construct($pdo) {
+        $this->pdo = $pdo;
+        // Initialize cache if available
+        if (class_exists('Symfony\Component\Cache\Adapter\FilesystemAdapter')) {
+            $this->cache = new \Symfony\Component\Cache\Adapter\FilesystemAdapter('user_management', 3600, __DIR__ . '/../../cache');
+        }
     }
-    return $password;
-}
-
-function successMessage($message) {
-    return <<<HTML
-    <div class='alert alert-success alert-dismissible fade show' role='alert'>
-        <svg class='bi flex-shrink-0 me-2' width='24' height='24' role='img' aria-label='Success:'><use xlink:href='#check-circle-fill'/></svg>
-        $message
-        <button type='button' class='btn-close' data-bs-dismiss='alert' aria-label='Close'></button>
-    </div>
-HTML;
-}
-
-function successMessageWithCredentials($message, $username, $password, $note, $student_id = null) {
-    $student_id_html = $student_id ? <<<HTML
-        <div class='d-flex justify-content-between mb-2'>
-            <span class='fw-bold'>Student ID:</span>
-            <span class='font-monospace bg-light px-2 py-1 rounded'>$student_id</span>
-        </div>
-HTML : '';
-
-    return <<<HTML
-    <div class='alert alert-success alert-dismissible fade show' role='alert'>
-        <div class='d-flex'>
-            <svg class='bi flex-shrink-0 me-2' width='24' height='24' role='img' aria-label='Success:'><use xlink:href='#check-circle-fill'/></svg>
-            <div>
-                <p>$message</p>
-                <div class='p-3 bg-white rounded border border-success mb-2'>
-                    $student_id_html
-                    <div class='d-flex justify-content-between mb-2'>
-                        <span class='fw-bold'>Username:</span>
-                        <span class='font-monospace bg-light px-2 py-1 rounded'>$username</span>
-                    </div>
-                    <div class='d-flex justify-content-between'>
-                        <span class='fw-bold'>Password:</span>
-                        <span class='font-monospace bg-light px-2 py-1 rounded'>$password</span>
-                    </div>
-                </div>
-                <p class='small'>$note</p>
-            </div>
-        </div>
-        <button type='button' class='btn-close' data-bs-dismiss='alert' aria-label='Close'></button>
-    </div>
-HTML;
-}
-
-function errorMessage($message) {
-    return <<<HTML
-    <div class='alert alert-danger alert-dismissible fade show' role='alert'>
-        <svg class='bi flex-shrink-0 me-2' width='24' height='24' role='img' aria-label='Danger:'><use xlink:href='#exclamation-triangle-fill'/></svg>
-        $message
-        <button type='button' class='btn-close' data-bs-dismiss='alert' aria-label='Close'></button>
-    </div>
-HTML;
+    
+    /**
+     * Create a new teacher with optional subject assignments
+     */
+    public function createTeacher($data) {
+        // Validate inputs
+        $validation = $this->validateTeacherData($data);
+        if (!$validation['valid']) {
+            return ['success' => false, 'message' => $validation['message']];
+        }
+        
+        // Generate secure credentials
+        $teacher_count = $this->pdo->query("SELECT COUNT(*) FROM users WHERE role_id = 2")->fetchColumn();
+        $username = 'teacher' . str_pad($teacher_count + 1, 3, '0', STR_PAD_LEFT);
+        $password = $this->generateStrongPassword(12);
+        $password_hash = password_hash($password, PASSWORD_DEFAULT);
+        
+        try {
+            $this->pdo->beginTransaction();
+            
+            // Create user account
+            $stmt = $this->pdo->prepare("INSERT INTO users 
+                                      (username, email, password_hash, first_name, last_name, phone, address, role_id, is_active, created_at) 
+                                      VALUES (?, ?, ?, ?, ?, ?, ?, 2, 1, NOW())");
+            $stmt->execute([
+                $username, 
+                $data['email'], 
+                $password_hash, 
+                $data['first_name'], 
+                $data['last_name'], 
+                $data['phone'], 
+                $data['address'] ?? ''
+            ]);
+            
+            $user_id = $this->pdo->lastInsertId();
+            
+            // Create teacher profile
+            $stmt = $this->pdo->prepare("INSERT INTO teacher_profiles 
+                                      (user_id, employee_id, qualification, experience_years, specialization, joining_date, salary, status) 
+                                      VALUES (?, ?, ?, ?, ?, CURDATE(), ?, 'active')");
+            
+            $employee_id = 'EMP' . date('Y') . str_pad($teacher_count + 1, 3, '0', STR_PAD_LEFT);
+            $stmt->execute([
+                $user_id,
+                $employee_id,
+                $data['qualification'] ?? '',
+                $data['experience_years'] ?? 0,
+                $data['specialization'] ?? '',
+                $data['salary'] ?? 0
+            ]);
+            
+            $teacher_profile_id = $this->pdo->lastInsertId();
+            
+            // Get current academic year
+            $stmt = $this->pdo->query("SELECT id FROM academic_years WHERE is_current = 1");
+            $academic_year_id = $stmt->fetchColumn() ?: 1;
+            
+            // Assign subjects if provided
+            if (!empty($data['subjects']) && is_array($data['subjects'])) {
+                $this->assignSubjectsToTeacher($teacher_profile_id, $data['subjects']);
+            }
+            
+            // Assign classes if provided - FIXED: Store in both tables for compatibility
+            if (!empty($data['classes']) && is_array($data['classes'])) {
+                $this->assignClassesToTeacher($user_id, $teacher_profile_id, $data['classes'], $academic_year_id);
+            }
+            
+            $this->pdo->commit();
+            
+            // Clear caches
+            $this->clearUserCaches();
+            
+            // Log activity
+            $this->logActivity('teacher_created', 'users', $user_id);
+            
+            return [
+                'success' => true,
+                'message' => 'Teacher created successfully!',
+                'credentials' => [
+                    'username' => $username,
+                    'password' => $password,
+                    'employee_id' => $employee_id
+                ],
+                'user_id' => $user_id
+            ];
+            
+        } catch (PDOException $e) {
+            $this->pdo->rollBack();
+            return ['success' => false, 'message' => 'Database error: ' . $e->getMessage()];
+        }
+    }
+    
+    /**
+     * Create a new student with class enrollment
+     */
+    public function createStudent($data) {
+        // Validate inputs
+        $validation = $this->validateStudentData($data);
+        if (!$validation['valid']) {
+            return ['success' => false, 'message' => $validation['message']];
+        }
+        
+        // Generate secure credentials
+        $student_count = $this->pdo->query("SELECT COUNT(*) FROM students")->fetchColumn();
+        $username = 'student' . str_pad($student_count + 1, 3, '0', STR_PAD_LEFT);
+        $password = $this->generateStrongPassword(10);
+        $password_hash = password_hash($password, PASSWORD_DEFAULT);
+        
+        // Generate student ID
+        $current_year = date('Y');
+        $student_id = 'STU' . $current_year . str_pad($student_count + 1, 3, '0', STR_PAD_LEFT);
+        
+        try {
+            $this->pdo->beginTransaction();
+            
+            // Create user account
+            $stmt = $this->pdo->prepare("INSERT INTO users 
+                                      (username, email, password_hash, first_name, last_name, phone, address, role_id, is_active, created_at) 
+                                      VALUES (?, ?, ?, ?, ?, ?, ?, 3, 1, NOW())");
+            $stmt->execute([
+                $username,
+                $data['email'],
+                $password_hash,
+                $data['first_name'],
+                $data['last_name'],
+                $data['phone'],
+                $data['address'] ?? ''
+            ]);
+            
+            $user_id = $this->pdo->lastInsertId();
+            
+            // Create student record
+            $stmt = $this->pdo->prepare("INSERT INTO students 
+                                      (user_id, student_id, admission_date, date_of_birth, blood_group, 
+                                       guardian_name, guardian_phone, guardian_email, status) 
+                                      VALUES (?, ?, CURDATE(), ?, ?, ?, ?, ?, 'active')");
+            $stmt->execute([
+                $user_id,
+                $student_id,
+                $data['date_of_birth'],
+                $data['blood_group'] ?? '',
+                $data['guardian_name'],
+                $data['guardian_phone'],
+                $data['guardian_email'] ?? ''
+            ]);
+            
+            $student_db_id = $this->pdo->lastInsertId();
+            
+            // Get current academic year
+            $stmt = $this->pdo->query("SELECT id FROM academic_years WHERE is_current = 1");
+            $academic_year_id = $stmt->fetchColumn() ?: 1;
+            
+            // Enroll in class
+            $stmt = $this->pdo->prepare("INSERT INTO student_enrollments 
+                                      (student_id, class_id, academic_year_id, enrollment_date, status) 
+                                      VALUES (?, ?, ?, CURDATE(), 'enrolled')");
+            $stmt->execute([$student_db_id, $data['class_id'], $academic_year_id]);
+            
+            // Also add to student_classes for compatibility
+            $stmt = $this->pdo->prepare("INSERT INTO student_classes 
+                                      (student_id, class_id, academic_year_id, enrollment_date, status) 
+                                      VALUES (?, ?, ?, CURDATE(), 'enrolled')");
+            $stmt->execute([$student_db_id, $data['class_id'], $academic_year_id]);
+            
+            $this->pdo->commit();
+            
+            // Clear caches
+            $this->clearUserCaches();
+            
+            // Log activity
+            $this->logActivity('student_created', 'students', $student_db_id);
+            
+            return [
+                'success' => true,
+                'message' => 'Student created successfully!',
+                'credentials' => [
+                    'username' => $username,
+                    'password' => $password,
+                    'student_id' => $student_id
+                ],
+                'user_id' => $user_id
+            ];
+            
+        } catch (PDOException $e) {
+            $this->pdo->rollBack();
+            return ['success' => false, 'message' => 'Database error: ' . $e->getMessage()];
+        }
+    }
+    
+    /**
+     * Assign subjects to a teacher
+     */
+    private function assignSubjectsToTeacher($teacher_profile_id, $subjects) {
+        foreach ($subjects as $subject_id) {
+            $stmt = $this->pdo->prepare("INSERT IGNORE INTO teacher_subjects (teacher_id, subject_id, assigned_date) VALUES (?, ?, NOW())");
+            $stmt->execute([$teacher_profile_id, $subject_id]);
+        }
+    }
+    
+    /**
+     * Assign classes to a teacher - FIXED: Store in both tables
+     */
+    private function assignClassesToTeacher($user_id, $teacher_profile_id, $classes, $academic_year_id) {
+        foreach ($classes as $class_data) {
+            // Store in teacher_classes table
+            $stmt = $this->pdo->prepare("INSERT IGNORE INTO teacher_classes 
+                                       (teacher_id, class_id, subject_id, academic_year_id, assigned_date) 
+                                       VALUES (?, ?, ?, ?, NOW())");
+            $stmt->execute([
+                $teacher_profile_id,
+                $class_data['class_id'],
+                $class_data['subject_id'],
+                $academic_year_id
+            ]);
+            
+            // ALSO store in class_subject_teachers table for compatibility
+            $stmt = $this->pdo->prepare("INSERT IGNORE INTO class_subject_teachers 
+                                       (class_id, subject_id, teacher_id, academic_year_id, assigned_date) 
+                                       VALUES (?, ?, ?, ?, NOW())");
+            $stmt->execute([
+                $class_data['class_id'],
+                $class_data['subject_id'],
+                $user_id, // Use user_id here, not teacher_profile_id
+                $academic_year_id
+            ]);
+        }
+    }
+    
+    /**
+     * Get teacher's assigned classes
+     */
+    public function getTeacherClasses($user_id) {
+        $stmt = $this->pdo->prepare("
+            SELECT DISTINCT 
+                c.id as class_id,
+                c.class_name,
+                c.section,
+                s.id as subject_id,
+                s.subject_name,
+                s.subject_code,
+                cst.assigned_date
+            FROM class_subject_teachers cst
+            JOIN classes c ON cst.class_id = c.id
+            JOIN subjects s ON cst.subject_id = s.id
+            WHERE cst.teacher_id = ? AND cst.is_active = 1 AND c.is_active = 1
+            ORDER BY c.class_level, c.section, s.subject_name
+        ");
+        $stmt->execute([$user_id]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+    
+    /**
+     * Validate teacher data
+     */
+    private function validateTeacherData($data) {
+        if (empty($data['first_name']) || empty($data['last_name'])) {
+            return ['valid' => false, 'message' => 'First name and last name are required'];
+        }
+        
+        if (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
+            return ['valid' => false, 'message' => 'Invalid email address'];
+        }
+        
+        if (empty($data['phone']) || strlen(preg_replace('/[^0-9]/', '', $data['phone'])) < 10) {
+            return ['valid' => false, 'message' => 'Valid phone number is required (minimum 10 digits)'];
+        }
+        
+        // Check if email already exists
+        $stmt = $this->pdo->prepare("SELECT id FROM users WHERE email = ?");
+        $stmt->execute([$data['email']]);
+        if ($stmt->fetch()) {
+            return ['valid' => false, 'message' => 'Email address already exists'];
+        }
+        
+        return ['valid' => true];
+    }
+    
+    /**
+     * Validate student data
+     */
+    private function validateStudentData($data) {
+        if (empty($data['first_name']) || empty($data['last_name'])) {
+            return ['valid' => false, 'message' => 'First name and last name are required'];
+        }
+        
+        if (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
+            return ['valid' => false, 'message' => 'Invalid email address'];
+        }
+        
+        if (empty($data['phone']) || strlen(preg_replace('/[^0-9]/', '', $data['phone'])) < 10) {
+            return ['valid' => false, 'message' => 'Valid phone number is required (minimum 10 digits)'];
+        }
+        
+        if (empty($data['class_id'])) {
+            return ['valid' => false, 'message' => 'Class selection is required'];
+        }
+        
+        if (empty($data['date_of_birth'])) {
+            return ['valid' => false, 'message' => 'Date of birth is required'];
+        }
+        
+        if (empty($data['guardian_name']) || empty($data['guardian_phone'])) {
+            return ['valid' => false, 'message' => 'Guardian name and phone are required'];
+        }
+        
+        // Check if email already exists
+        $stmt = $this->pdo->prepare("SELECT id FROM users WHERE email = ?");
+        $stmt->execute([$data['email']]);
+        if ($stmt->fetch()) {
+            return ['valid' => false, 'message' => 'Email address already exists'];
+        }
+        
+        // Validate age
+        $birthDate = new DateTime($data['date_of_birth']);
+        $today = new DateTime();
+        $age = $today->diff($birthDate)->y;
+        
+        if ($age < 3 || $age > 25) {
+            return ['valid' => false, 'message' => 'Student age must be between 3 and 25 years'];
+        }
+        
+        return ['valid' => true];
+    }
+    
+    /**
+     * Generate strong password
+     */
+    private function generateStrongPassword($length = 12) {
+        $chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*';
+        $password = '';
+        for ($i = 0; $i < $length; $i++) {
+            $password .= $chars[random_int(0, strlen($chars) - 1)];
+        }
+        return $password;
+    }
+    
+    /**
+     * Get all subjects for teacher assignment
+     */
+    public function getAllSubjects() {
+        $stmt = $this->pdo->query("SELECT id, subject_name, subject_code FROM subjects WHERE is_active = 1 ORDER BY subject_name");
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+    
+    /**
+     * Get all classes for assignment
+     */
+    public function getAllClasses() {
+        $stmt = $this->pdo->query("SELECT id, class_name, section, class_level FROM classes WHERE is_active = 1 ORDER BY class_level, section");
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+    
+    /**
+     * Reset user password
+     */
+    public function resetPassword($user_id) {
+        $new_password = $this->generateStrongPassword(10);
+        $password_hash = password_hash($new_password, PASSWORD_DEFAULT);
+        
+        try {
+            $stmt = $this->pdo->prepare("UPDATE users SET password_hash = ?, password_reset_required = 1 WHERE id = ?");
+            $stmt->execute([$password_hash, $user_id]);
+            
+            $this->logActivity('password_reset', 'users', $user_id);
+            
+            return [
+                'success' => true,
+                'message' => 'Password reset successfully!',
+                'new_password' => $new_password
+            ];
+        } catch (PDOException $e) {
+            return ['success' => false, 'message' => 'Error resetting password: ' . $e->getMessage()];
+        }
+    }
+    
+    /**
+     * Toggle user status
+     */
+    public function toggleUserStatus($user_id, $status) {
+        try {
+            $stmt = $this->pdo->prepare("UPDATE users SET is_active = ? WHERE id = ?");
+            $stmt->execute([$status, $user_id]);
+            
+            $this->clearUserCaches();
+            $status_text = $status ? 'activated' : 'deactivated';
+            $this->logActivity('user_' . $status_text, 'users', $user_id);
+            
+            return [
+                'success' => true,
+                'message' => "User has been {$status_text} successfully!"
+            ];
+        } catch (PDOException $e) {
+            return ['success' => false, 'message' => 'Error updating user status: ' . $e->getMessage()];
+        }
+    }
+    
+    /**
+     * Get user statistics
+     */
+    public function getUserStats() {
+        if ($this->cache) {
+            $cachedStats = $this->cache->getItem('user_stats');
+            if ($cachedStats->isHit()) {
+                return $cachedStats->get();
+            }
+        }
+        
+        $stats = [
+            'total_users' => $this->pdo->query("SELECT COUNT(*) FROM users WHERE role_id IN (2,3)")->fetchColumn(),
+            'total_students' => $this->pdo->query("SELECT COUNT(*) FROM users WHERE role_id = 3")->fetchColumn(),
+            'total_teachers' => $this->pdo->query("SELECT COUNT(*) FROM users WHERE role_id = 2")->fetchColumn(),
+            'active_users' => $this->pdo->query("SELECT COUNT(*) FROM users WHERE is_active = 1 AND role_id IN (2,3)")->fetchColumn(),
+            'inactive_users' => $this->pdo->query("SELECT COUNT(*) FROM users WHERE is_active = 0 AND role_id IN (2,3)")->fetchColumn()
+        ];
+        
+        if ($this->cache) {
+            $cachedStats->set($stats)->expiresAfter(3600);
+            $this->cache->save($cachedStats);
+        }
+        
+        return $stats;
+    }
+    
+    /**
+     * Clear user-related caches
+     */
+    private function clearUserCaches() {
+        if ($this->cache) {
+            $this->cache->deleteItems(['user_stats', 'user_list_all', 'class_list', 'subject_list']);
+        }
+    }
+    
+    /**
+     * Log activity
+     */
+    private function logActivity($action, $table, $record_id) {
+        if (function_exists('logActivity')) {
+            logActivity($this->pdo, $action, $table, $record_id);
+        }
+    }
 }
 ?>
