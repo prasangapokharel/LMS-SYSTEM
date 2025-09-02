@@ -36,7 +36,7 @@ if ($subject_filter !== 'all') {
 $where_clause = implode(' AND ', $where_conditions);
 
 // Get assignments
-$stmt = $pdo->prepare("SELECT a.*, s.subject_name, 
+$stmt = $pdo->prepare("SELECT a.*, s.subject_name, u.first_name, u.last_name,
                       sub.id as submission_id, sub.grade, sub.feedback, sub.submission_date,
                       CASE 
                           WHEN sub.grade IS NOT NULL THEN 'graded'
@@ -46,6 +46,7 @@ $stmt = $pdo->prepare("SELECT a.*, s.subject_name,
                       END as assignment_status
                       FROM assignments a
                       JOIN subjects s ON a.subject_id = s.id
+                      JOIN users u ON a.teacher_id = u.id
                       LEFT JOIN assignment_submissions sub ON a.id = sub.assignment_id AND sub.student_id = ?
                       WHERE $where_clause AND a.is_active = 1
                       ORDER BY a.due_date ASC");
@@ -61,4 +62,13 @@ $stmt = $pdo->prepare("SELECT DISTINCT s.id, s.subject_name
                       WHERE a.class_id = ? AND a.is_active = 1");
 $stmt->execute([$student_class['class_id'] ?? 0]);
 $subjects = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Get assignment statistics
+$stats = [
+    'total' => count($assignments),
+    'pending' => count(array_filter($assignments, fn($a) => $a['assignment_status'] === 'pending')),
+    'submitted' => count(array_filter($assignments, fn($a) => $a['assignment_status'] === 'submitted')),
+    'graded' => count(array_filter($assignments, fn($a) => $a['assignment_status'] === 'graded')),
+    'overdue' => count(array_filter($assignments, fn($a) => $a['assignment_status'] === 'overdue'))
+];
 ?>

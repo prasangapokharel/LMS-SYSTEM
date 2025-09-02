@@ -69,9 +69,9 @@ include '../include/buffer.php';
         }
 
         .mobile-header {
-            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+            background: #3b82f6;
             color: white;
-            padding: 60px 20px 30px;
+            padding: 30px 10px 20px;
             text-align: center;
             position: relative;
         }
@@ -92,6 +92,7 @@ include '../include/buffer.php';
         }
 
         .profile-avatar {
+            text-decoration: none;
             width: 40px;
             height: 40px;
             border-radius: 50%;
@@ -240,28 +241,31 @@ include '../include/buffer.php';
         <div class="header-content">
             <div></div>
             <h1 class="menu-title">Menu</h1>
-            <div class="profile-avatar">
+            <a href="profile.php" class="profile-avatar">
                 <?= strtoupper(substr($user['first_name'], 0, 1)) ?>
-            </div>
+            </a>
+            <!-- <div class="profile-avatar">
+                <?= strtoupper(substr($user['first_name'], 0, 1)) ?>
+            </div> -->
         </div>
     </div>
 
 
     <div class="menu-container">
         <div class="menu-list">
-            <a href="index.php" class="menu-item">
+            <!-- <a href="index.php" class="menu-item">
                 <div class="menu-icon icon-blue">🏠</div>
                 <div class="menu-content">
                     <div class="menu-item-title">Dashboard</div>
                     <div class="menu-item-desc">View your daily overview</div>
                 </div>
-            </a>
+            </a> -->
 
             <a href="assignments.php" class="menu-item">
                 <?php if ($pending_assignments > 0): ?>
                     <div class="menu-badge"><?= $pending_assignments ?></div>
                 <?php endif; ?>
-                <div class="menu-icon icon-orange">📝</div>
+                <div class="menu-icon icon-yellow"><img class="h-8 w-8"  src="../assets/icons/assingn.png"></div>
                 <div class="menu-content">
                     <div class="menu-item-title">Assignments</div>
                     <div class="menu-item-desc">View & Submit Assignment</div>
@@ -269,7 +273,7 @@ include '../include/buffer.php';
             </a>
 
             <a href="attendance.php" class="menu-item">
-                <div class="menu-icon icon-green">📊</div>
+                <div class="menu-icon icon-yellow"><img class="h-8 w-8"  src="../assets/icons/attendance.png"></div>
                 <div class="menu-content">
                     <div class="menu-item-title">Attendance</div>
                     <div class="menu-item-desc">Monthly & Aggregate Report</div>
@@ -280,7 +284,7 @@ include '../include/buffer.php';
                 <?php if ($new_resources > 0): ?>
                     <div class="menu-badge green"><?= $new_resources ?></div>
                 <?php endif; ?>
-                <div class="menu-icon icon-purple">📚</div>
+                <div class="menu-icon icon-yellow"><img class="h-8 w-8"  src="../assets/icons/reading.png"></div>
                 <div class="menu-content">
                     <div class="menu-item-title">Reading Materials</div>
                     <div class="menu-item-desc">View Reading Material & Resources</div>
@@ -291,7 +295,7 @@ include '../include/buffer.php';
                 <?php if ($unread_messages > 0): ?>
                     <div class="menu-badge"><?= $unread_messages ?></div>
                 <?php endif; ?>
-                <div class="menu-icon icon-blue">💬</div>
+                <div class="menu-icon icon-yellow"><img class="h-8 w-8"  src="../assets/icons/message.png"></div>
                 <div class="menu-content">
                     <div class="menu-item-title">Messages</div>
                     <div class="menu-item-desc">View messages from teachers</div>
@@ -299,7 +303,7 @@ include '../include/buffer.php';
             </a>
 
             <a href="report-card.php" class="menu-item">
-                <div class="menu-icon icon-yellow">🏆</div>
+                <div class="menu-icon icon-yellow"><img class="h-8 w-8"  src="../assets/icons/setting.png"></div>
                 <div class="menu-content">
                     <div class="menu-item-title">Report Card</div>
                     <div class="menu-item-desc">View Exam Results</div>
@@ -307,7 +311,7 @@ include '../include/buffer.php';
             </a>
 
             <a href="events.php" class="menu-item">
-                <div class="menu-icon icon-indigo">📅</div>
+                <div class="menu-icon icon-yellow"><img class="h-8 w-8"  src="../assets/icons/events.png"></div>
                 <div class="menu-content">
                     <div class="menu-item-title">Events</div>
                     <div class="menu-item-desc">Events & Class Routine</div>
@@ -315,20 +319,20 @@ include '../include/buffer.php';
             </a>
 
             <a href="leavenotice.php" class="menu-item">
-                <div class="menu-icon icon-red">📋</div>
+                <div class="menu-icon icon-yellow"><img class="h-8 w-8"  src="../assets/icons/leave.png"></div>
                 <div class="menu-content">
                     <div class="menu-item-title">Leave Application</div>
                     <div class="menu-item-desc">Apply for leave requests</div>
                 </div>
             </a>
 
-            <a href="profile.php" class="menu-item">
+            <!-- <a href="profile.php" class="menu-item">
                 <div class="menu-icon icon-pink">👤</div>
                 <div class="menu-content">
                     <div class="menu-item-title">My Profile</div>
                     <div class="menu-item-desc">Manage personal information</div>
                 </div>
-            </a>
+            </a> -->
         </div>
     </div>
 

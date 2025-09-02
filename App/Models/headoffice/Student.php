@@ -1,7 +1,7 @@
 <?php
 namespace App\Models\headoffice;
 
-require_once __DIR__ . '/../../../config/database.php';
+include '../include/connect.php';
 
 class Student {
     private $conn;

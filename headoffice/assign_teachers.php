@@ -1,313 +1,5 @@
-<?php 
-// Include necessary files
+<?php
 include_once '../App/Models/headoffice/Assign.php';
-include_once '../include/connect.php';
-include_once '../include/session.php';
-
-requireRole('principal');
-
-$user = getCurrentUser($pdo);
-$msg = "";
-$error = "";
-
-// Get class ID from URL parameter
-$class_id = isset($_GET['class_id']) ? (int)$_GET['class_id'] : 0;
-
-if (!$class_id) {
-    header('Location: createclass.php');
-    exit;
-}
-
-// Get current academic year
-$stmt = $pdo->prepare("SELECT * FROM academic_years WHERE is_current = 1");
-$stmt->execute();
-$current_academic_year = $stmt->fetch(PDO::FETCH_ASSOC);
-
-// If no current academic year is found, get the most recent one instead
-if (!$current_academic_year) {
-    $stmt = $pdo->prepare("SELECT * FROM academic_years ORDER BY year_name DESC LIMIT 1");
-    $stmt->execute();
-    $current_academic_year = $stmt->fetch(PDO::FETCH_ASSOC);
-    
-    // If still no academic year found, create a default one
-    if (!$current_academic_year) {
-        // Insert a new academic year
-        $currentYear = date('Y');
-        $nextYear = date('Y', strtotime('+1 year'));
-        $yearName = $currentYear . '-' . $nextYear;
-        
-        $stmt = $pdo->prepare("INSERT INTO academic_years (year_name, start_date, end_date, is_current) VALUES (?, CURDATE(), DATE_ADD(CURDATE(), INTERVAL 1 YEAR), 1)");
-        $stmt->execute([$yearName]);
-        
-        // Get the newly created academic year
-        $stmt = $pdo->prepare("SELECT * FROM academic_years WHERE year_name = ?");
-        $stmt->execute([$yearName]);
-        $current_academic_year = $stmt->fetch(PDO::FETCH_ASSOC);
-        
-        $msg = "No active academic year found. A new academic year '$yearName' has been created.";
-    } else {
-        // Set the found academic year as current
-        $stmt = $pdo->prepare("UPDATE academic_years SET is_current = 1 WHERE id = ?");
-        $stmt->execute([$current_academic_year['id']]);
-        
-        $msg = "No active academic year found. The most recent academic year has been set as current.";
-    }
-}
-
-// Add a check before using academic_year_id in queries
-if (!isset($current_academic_year['id']) || empty($current_academic_year['id'])) {
-    $error = "Critical error: Unable to determine academic year. Please contact system administrator.";
-    // Set a fallback value to prevent SQL errors
-    $current_academic_year['id'] = 0;
-}
-
-// Get class details
-$stmt = $pdo->prepare("SELECT * FROM classes WHERE id = ?");
-$stmt->execute([$class_id]);
-$class = $stmt->fetch(PDO::FETCH_ASSOC);
-
-if (!$class) {
-    header('Location: createclass.php');
-    exit;
-}
-
-// Get student count for this class
-$stmt = $pdo->prepare("SELECT COUNT(*) FROM student_classes WHERE class_id = ? AND academic_year_id = ?");
-$stmt->execute([$class_id, $current_academic_year['id']]);
-$student_count = $stmt->fetchColumn();
-
-// Get all teachers
-$stmt = $pdo->prepare("SELECT u.* FROM users u 
-                      JOIN user_roles r ON u.role_id = r.id 
-                      WHERE r.role_name = 'teacher' AND u.is_active = 1
-                      ORDER BY u.first_name, u.last_name");
-$stmt->execute();
-$teachers = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-// Get all subjects
-$stmt = $pdo->prepare("SELECT * FROM subjects WHERE is_active = 1 ORDER BY subject_name");
-$stmt->execute();
-$subjects = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-// Get current assignments for this class
-$stmt = $pdo->prepare("SELECT cst.*, s.subject_name, s.subject_code, 
-                      u.first_name, u.last_name, u.email
-                      FROM class_subject_teachers cst
-                      JOIN subjects s ON cst.subject_id = s.id
-                      JOIN users u ON cst.teacher_id = u.id
-                      WHERE cst.class_id = ? AND cst.academic_year_id = ? AND cst.is_active = 1
-                      ORDER BY s.subject_name");
-$stmt->execute([$class_id, $current_academic_year['id']]);
-$assignments = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-// Initialize assignments array if query returns false
-if (!$assignments) {
-    $assignments = [];
-}
-
-// Handle form submissions
-if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    // Add new subject
-    if (isset($_POST['add_subject'])) {
-        $subject_name = trim($_POST['subject_name']);
-        $subject_code = trim($_POST['subject_code']);
-        
-        // Validate input
-        if (empty($subject_name) || empty($subject_code)) {
-            $error = "Subject name and code are required.";
-        } else {
-            // Check if subject code already exists
-            $stmt = $pdo->prepare("SELECT COUNT(*) FROM subjects WHERE subject_code = ?");
-            $stmt->execute([$subject_code]);
-            if ($stmt->fetchColumn() > 0) {
-                $error = "Subject code already exists. Please use a different code.";
-            } else {
-                try {
-                    $stmt = $pdo->prepare("INSERT INTO subjects (subject_name, subject_code, class_id) 
-                                          VALUES (?, ?, ?)");
-                    $stmt->execute([$subject_name, $subject_code, $class_id]);
-                    
-                    $msg = "Subject added successfully.";
-                    
-                    // Refresh subjects list
-                    $stmt = $pdo->prepare("SELECT * FROM subjects WHERE is_active = 1 ORDER BY subject_name");
-                    $stmt->execute();
-                    $subjects = $stmt->fetchAll(PDO::FETCH_ASSOC);
-                } catch (PDOException $e) {
-                    $error = "Error adding subject: " . $e->getMessage();
-                }
-            }
-        }
-    }
-    
-    // Assign teacher to subject
-    if (isset($_POST['assign_teacher'])) {
-        $subject_id = (int)$_POST['subject_id'];
-        $teacher_id = (int)$_POST['teacher_id'];
-        
-        // Validate input
-        if (!$subject_id || !$teacher_id) {
-            $error = "Please select both subject and teacher.";
-        } else if (!isset($current_academic_year['id']) || $current_academic_year['id'] <= 0) {
-            $error = "No valid academic year found. Cannot assign teachers without an academic year.";
-        } else {
-            try {
-                // Verify that the academic_year_id exists
-                $stmt = $pdo->prepare("SELECT COUNT(*) FROM academic_years WHERE id = ?");
-                $stmt->execute([$current_academic_year['id']]);
-                if ($stmt->fetchColumn() == 0) {
-                    $error = "The selected academic year does not exist in the database.";
-                } else {
-                    // Check if assignment already exists
-                    $stmt = $pdo->prepare("SELECT COUNT(*) FROM class_subject_teachers 
-                                          WHERE class_id = ? AND subject_id = ? AND academic_year_id = ?");
-                    $stmt->execute([$class_id, $subject_id, $current_academic_year['id']]);
-                    
-                    if ($stmt->fetchColumn() > 0) {
-                        // Update existing assignment
-                        $stmt = $pdo->prepare("UPDATE class_subject_teachers 
-                                              SET teacher_id = ?, assigned_date = CURDATE() 
-                                              WHERE class_id = ? AND subject_id = ? AND academic_year_id = ?");
-                        $stmt->execute([$teacher_id, $class_id, $subject_id, $current_academic_year['id']]);
-                        $msg = "Teacher assignment updated successfully.";
-                    } else {
-                        // Create new assignment
-                        $stmt = $pdo->prepare("INSERT INTO class_subject_teachers 
-                                              (class_id, subject_id, teacher_id, academic_year_id, assigned_date) 
-                                              VALUES (?, ?, ?, ?, CURDATE())");
-                        $stmt->execute([$class_id, $subject_id, $teacher_id, $current_academic_year['id']]);
-                        $msg = "Teacher assigned successfully.";
-                    }
-                    
-                    // Log the activity
-                    logActivity($pdo, 'teacher_assigned', 'class_subject_teachers', $pdo->lastInsertId());
-                    
-                    // Refresh assignments list
-                    $stmt = $pdo->prepare("SELECT cst.*, s.subject_name, s.subject_code, 
-                                          u.first_name, u.last_name, u.email
-                                          FROM class_subject_teachers cst
-                                          JOIN subjects s ON cst.subject_id = s.id
-                                          JOIN users u ON cst.teacher_id = u.id
-                                          WHERE cst.class_id = ? AND cst.academic_year_id = ? AND cst.is_active = 1
-                                          ORDER BY s.subject_name");
-                    $stmt->execute([$class_id, $current_academic_year['id']]);
-                    $assignments = $stmt->fetchAll(PDO::FETCH_ASSOC);
-                    
-                    // Initialize assignments array if query returns false
-                    if (!$assignments) {
-                        $assignments = [];
-                    }
-                }
-            } catch (PDOException $e) {
-                $error = "Error assigning teacher: " . $e->getMessage();
-            }
-        }
-    }
-    
-    // Remove assignment
-    if (isset($_POST['remove_assignment'])) {
-        $assignment_id = (int)$_POST['assignment_id'];
-        
-        try {
-            $stmt = $pdo->prepare("UPDATE class_subject_teachers SET is_active = 0 WHERE id = ?");
-            $stmt->execute([$assignment_id]);
-            
-            $msg = "Teacher assignment removed successfully.";
-            
-            // Log the activity
-            logActivity($pdo, 'teacher_assignment_removed', 'class_subject_teachers', $assignment_id);
-            
-            // Refresh assignments list
-            $stmt = $pdo->prepare("SELECT cst.*, s.subject_name, s.subject_code, 
-                                  u.first_name, u.last_name, u.email
-                                  FROM class_subject_teachers cst
-                                  JOIN subjects s ON cst.subject_id = s.id
-                                  JOIN users u ON cst.teacher_id = u.id
-                                  WHERE cst.class_id = ? AND cst.academic_year_id = ? AND cst.is_active = 1
-                                  ORDER BY s.subject_name");
-            $stmt->execute([$class_id, $current_academic_year['id']]);
-            $assignments = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            
-            // Initialize assignments array if query returns false
-            if (!$assignments) {
-                $assignments = [];
-            }
-        } catch (PDOException $e) {
-            $error = "Error removing assignment: " . $e->getMessage();
-        }
-    }
-    
-    // Bulk assign teachers
-    if (isset($_POST['bulk_assign'])) {
-        $teacher_id = (int)$_POST['bulk_teacher_id'];
-        $subject_ids = isset($_POST['bulk_subjects']) ? $_POST['bulk_subjects'] : [];
-        
-        if (!$teacher_id || empty($subject_ids)) {
-            $error = "Please select a teacher and at least one subject.";
-        } else if (!isset($current_academic_year['id']) || $current_academic_year['id'] <= 0) {
-            $error = "No valid academic year found. Cannot assign teachers without an academic year.";
-        } else {
-            try {
-                // Verify that the academic_year_id exists
-                $stmt = $pdo->prepare("SELECT COUNT(*) FROM academic_years WHERE id = ?");
-                $stmt->execute([$current_academic_year['id']]);
-                if ($stmt->fetchColumn() == 0) {
-                    $error = "The selected academic year does not exist in the database.";
-                } else {
-                    $pdo->beginTransaction();
-                    
-                    foreach ($subject_ids as $subject_id) {
-                        // Check if assignment already exists
-                        $stmt = $pdo->prepare("SELECT COUNT(*) FROM class_subject_teachers 
-                                              WHERE class_id = ? AND subject_id = ? AND academic_year_id = ?");
-                        $stmt->execute([$class_id, $subject_id, $current_academic_year['id']]);
-                        
-                        if ($stmt->fetchColumn() > 0) {
-                            // Update existing assignment
-                            $stmt = $pdo->prepare("UPDATE class_subject_teachers 
-                                                  SET teacher_id = ?, assigned_date = CURDATE() 
-                                                  WHERE class_id = ? AND subject_id = ? AND academic_year_id = ?");
-                            $stmt->execute([$teacher_id, $class_id, $subject_id, $current_academic_year['id']]);
-                        } else {
-                            // Create new assignment
-                            $stmt = $pdo->prepare("INSERT INTO class_subject_teachers 
-                                                  (class_id, subject_id, teacher_id, academic_year_id, assigned_date) 
-                                                  VALUES (?, ?, ?, ?, CURDATE())");
-                            $stmt->execute([$class_id, $subject_id, $teacher_id, $current_academic_year['id']]);
-                        }
-                    }
-                    
-                    $pdo->commit();
-                    $msg = "Bulk teacher assignment completed successfully.";
-                    
-                    // Log the activity
-                    logActivity($pdo, 'bulk_teacher_assigned', 'class_subject_teachers', $class_id);
-                    
-                    // Refresh assignments list
-                    $stmt = $pdo->prepare("SELECT cst.*, s.subject_name, s.subject_code, 
-                                          u.first_name, u.last_name, u.email
-                                          FROM class_subject_teachers cst
-                                          JOIN subjects s ON cst.subject_id = s.id
-                                          JOIN users u ON cst.teacher_id = u.id
-                                          WHERE cst.class_id = ? AND cst.academic_year_id = ? AND cst.is_active = 1
-                                          ORDER BY s.subject_name");
-                    $stmt->execute([$class_id, $current_academic_year['id']]);
-                    $assignments = $stmt->fetchAll(PDO::FETCH_ASSOC);
-                    
-                    // Initialize assignments array if query returns false
-                    if (!$assignments) {
-                        $assignments = [];
-                    }
-                }
-            } catch (PDOException $e) {
-                if ($pdo->inTransaction()) {
-                    $pdo->rollBack();
-                }
-                $error = "Error in bulk assignment: " . $e->getMessage();
-            }
-        }
-    }
-}
 ?>
 
 <!DOCTYPE html>
@@ -316,21 +8,49 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Assign Teachers - School LMS</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="../assets/css/ui.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#3b82f6',
+                        'primary-dark': '#2563eb',
+                        'primary-light': '#dbeafe',
+                        sidebar: {
+                            bg: '#1e293b',
+                            hover: '#334155',
+                            active: '#3b82f6',
+                            text: '#f8fafc',
+                            muted: '#94a3b8',
+                            border: '#475569'
+                        }
+                    },
+                    fontFamily: {
+                        'inter': ['Inter', 'system-ui', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
-<body class="bg-grey-50">
-    <div class="flex">
-      
-        <!-- Main Content -->
-        <div class="flex-1 ml-0 lg:ml-64 p-4 lg:p-8">
+<body class="bg-gray-50 font-inter">
+    <!-- Include sidebar -->
+    <?php include '../include/sidebar.php'; ?>
+
+    <!-- Main Content -->
+    <div class="lg:pl-64">
+        <div class="p-6">
             <!-- Page Header -->
-            <div class="bg-gradient-to-r from-purple-600 to-indigo-700 rounded-2xl p-6 text-white shadow-lg mb-8">
+            <div class="bg-gradient-to-r from-primary to-primary-dark rounded-xl p-6 text-white shadow-lg mb-6">
                 <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between">
                     <div>
                         <div class="flex items-center mb-2">
                             <div class="w-12 h-12 bg-white bg-opacity-20 rounded-xl flex items-center justify-center mr-4">
-                                <i class="fas fa-chalkboard-teacher text-xl"></i>
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                                </svg>
                             </div>
                             <h1 class="text-2xl lg:text-3xl font-bold">Assign Teachers</h1>
                         </div>
@@ -340,9 +60,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                         
                         <nav class="mt-4">
                             <ol class="flex space-x-2 text-sm">
-                                <li><a href="index.php" class="text-white">Dashboard</a></li>
+                                <li><a href="index.php" class="text-white hover:text-primary-light">Dashboard</a></li>
                                 <li><span class="text-white opacity-70 mx-2">/</span></li>
-                                <li><a href="createclass.php" class="text-white">Classes</a></li>
+                                <li><a href="createclass.php" class="text-white hover:text-primary-light">Classes</a></li>
                                 <li><span class="text-white opacity-70 mx-2">/</span></li>
                                 <li class="text-white opacity-90">Assign Teachers</li>
                             </ol>
@@ -350,8 +70,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     </div>
                     
                     <div class="mt-4 lg:mt-0">
-                        <a href="createclass.php" class="inline-flex items-center px-4 py-2 bg-white bg-opacity-20 rounded-lg text-white">
-                            <i class="fas fa-arrow-left mr-2"></i>
+                        <a href="createclass.php" class="inline-flex items-center px-4 py-2 bg-white bg-opacity-20 rounded-lg text-white hover:bg-opacity-30 transition-colors">
+                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                            </svg>
                             Back to Classes
                         </a>
                     </div>
@@ -362,7 +84,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             <?php if ($msg): ?>
             <div class="bg-green-50 border-l-4 border-green-500 p-4 mb-6 rounded-lg flex items-start">
                 <div class="text-green-500 mr-3">
-                    <i class="fas fa-check-circle text-xl"></i>
+                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+                    </svg>
                 </div>
                 <div>
                     <h3 class="text-green-800 font-medium">Success!</h3>
@@ -374,7 +98,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             <?php if ($error): ?>
             <div class="bg-red-50 border-l-4 border-red-500 p-4 mb-6 rounded-lg flex items-start">
                 <div class="text-red-500 mr-3">
-                    <i class="fas fa-exclamation-circle text-xl"></i>
+                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path>
+                    </svg>
                 </div>
                 <div>
                     <h3 class="text-red-800 font-medium">Error!</h3>
@@ -383,26 +109,16 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             </div>
             <?php endif; ?>
 
-            <?php if (!$current_academic_year || $current_academic_year['id'] <= 0): ?>
-            <div class="bg-yellow-50 border-l-4 border-yellow-500 p-4 mb-6 rounded-lg flex items-start">
-                <div class="text-yellow-500 mr-3">
-                    <i class="fas fa-exclamation-triangle text-xl"></i>
-                </div>
-                <div>
-                    <h3 class="text-yellow-800 font-medium">Academic Year Warning</h3>
-                    <p class="text-yellow-700">No active academic year is set. Please set an active academic year in the System Settings before assigning teachers.</p>
-                </div>
-            </div>
-            <?php endif; ?>
-
             <!-- Class Information -->
             <div class="bg-white rounded-xl shadow-md p-6 mb-8">
                 <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
-                    <i class="fas fa-info-circle text-blue-600 mr-2"></i>
+                    <svg class="w-6 h-6 text-primary mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
                     Class Information
                 </h2>
                 <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-                    <div class="bg-gray-50 p-4 rounded-lg border-l-4 border-blue-500">
+                    <div class="bg-gray-50 p-4 rounded-lg border-l-4 border-primary">
                         <div class="text-sm text-gray-500 font-medium">Class Name</div>
                         <div class="text-gray-800 font-semibold mt-1"><?= htmlspecialchars($class['class_name']) ?></div>
                     </div>
@@ -418,7 +134,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                         <div class="text-sm text-gray-500 font-medium">Academic Year</div>
                         <div class="text-gray-800 font-semibold mt-1"><?= htmlspecialchars($current_academic_year['year_name']) ?></div>
                     </div>
-                    <div class="bg-gray-50 p-4 rounded-lg border-l-4 border-indigo-500">
+                    <div class="bg-gray-50 p-4 rounded-lg border-l-4 border-primary">
                         <div class="text-sm text-gray-500 font-medium">Students Enrolled</div>
                         <div class="text-gray-800 font-semibold mt-1"><?= $student_count ?> / <?= htmlspecialchars($class['capacity']) ?></div>
                     </div>
@@ -433,14 +149,17 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 <!-- Current Assignments -->
                 <div class="lg:col-span-2">
                     <div class="bg-white rounded-xl shadow-md overflow-hidden">
-                        <div class="bg-gradient-to-r from-blue-600 to-blue-700 p-5 flex justify-between items-center">
+                        <div class="bg-gradient-to-r from-primary to-primary-dark p-5 flex justify-between items-center">
                             <h2 class="text-lg font-bold text-white flex items-center">
-                                <i class="fas fa-user-check mr-2"></i>
+                                <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
                                 Current Teacher Assignments
                             </h2>
-                            <button type="button" class="px-3 py-1.5 bg-white bg-opacity-20 rounded-lg text-white text-sm" 
-                                    data-modal-target="bulkAssignModal">
-                                <i class="fas fa-tasks mr-1"></i>
+                            <button type="button" class="px-3 py-1.5 bg-white bg-opacity-20 rounded-lg text-white text-sm hover:bg-opacity-30 transition-colors" data-modal-target="bulkAssignModal">
+                                <svg class="w-4 h-4 mr-1 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+                                </svg>
                                 Bulk Assign
                             </button>
                         </div>
@@ -448,7 +167,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                             <?php if (empty($assignments)): ?>
                             <div class="text-center py-10">
                                 <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                                    <i class="fas fa-user-slash text-gray-400 text-2xl"></i>
+                                    <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728L5.636 5.636m12.728 12.728L18.364 5.636M5.636 18.364l12.728-12.728"></path>
+                                    </svg>
                                 </div>
                                 <h3 class="text-lg font-semibold text-gray-700 mb-2">No Teacher Assignments</h3>
                                 <p class="text-gray-500 max-w-md mx-auto">
@@ -469,16 +190,16 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                                     </thead>
                                     <tbody class="bg-white divide-y divide-gray-200">
                                         <?php foreach ($assignments as $assignment): ?>
-                                        <tr>
+                                        <tr class="hover:bg-gray-50">
                                             <td class="px-6 py-4 whitespace-nowrap">
-                                                <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
-                                                    <?= htmlspecialchars($assignment['subject_name']) ?> 
-                                                    <span class="ml-1 text-xs text-blue-600">(<?= htmlspecialchars($assignment['subject_code']) ?>)</span>
+                                                <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-primary-light text-primary">
+                                                    <?= htmlspecialchars($assignment['subject_name']) ?>
+                                                    <span class="ml-1 text-xs text-primary-dark">(<?= htmlspecialchars($assignment['subject_code']) ?>)</span>
                                                 </span>
                                             </td>
                                             <td class="px-6 py-4 whitespace-nowrap">
                                                 <div class="flex items-center">
-                                                    <div class="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-white font-medium text-sm mr-3">
+                                                    <div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white font-medium text-sm mr-3">
                                                         <?= strtoupper(substr($assignment['first_name'], 0, 1) . substr($assignment['last_name'], 0, 1)) ?>
                                                     </div>
                                                     <div>
@@ -495,31 +216,34 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                                                 <?= date('M d, Y', strtotime($assignment['assigned_date'])) ?>
                                             </td>
                                             <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                                <button type="button" class="text-indigo-600 mr-3"
-                                                        data-modal-target="editAssignmentModal<?= $assignment['id'] ?>">
-                                                    <i class="fas fa-edit"></i>
+                                                <button type="button" class="text-primary hover:text-primary-dark mr-3" data-modal-target="editAssignmentModal<?= $assignment['id'] ?>">
+                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                                                    </svg>
                                                 </button>
-                                                <button type="button" class="text-red-600"
-                                                        data-modal-target="removeAssignmentModal<?= $assignment['id'] ?>">
-                                                    <i class="fas fa-trash"></i>
+                                                <button type="button" class="text-red-600 hover:text-red-900" data-modal-target="removeAssignmentModal<?= $assignment['id'] ?>">
+                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                                    </svg>
                                                 </button>
-                                                
+
                                                 <!-- Edit Assignment Modal -->
                                                 <div id="editAssignmentModal<?= $assignment['id'] ?>" class="fixed inset-0 z-50 hidden overflow-y-auto">
                                                     <div class="flex items-center justify-center min-h-screen p-4">
-                                                        <div class="fixed inset-0 bg-black bg-opacity-50"
-                                                             data-modal-close="editAssignmentModal<?= $assignment['id'] ?>"></div>
-                                                        
+                                                        <div class="fixed inset-0 bg-black bg-opacity-50" data-modal-close="editAssignmentModal<?= $assignment['id'] ?>"></div>
                                                         <div class="bg-white rounded-xl shadow-xl max-w-md w-full mx-auto z-10 overflow-hidden">
-                                                            <div class="bg-gradient-to-r from-blue-600 to-blue-700 p-5">
+                                                            <div class="bg-gradient-to-r from-primary to-primary-dark p-5">
                                                                 <div class="flex justify-between items-center">
                                                                     <h3 class="text-lg font-bold text-white flex items-center">
-                                                                        <i class="fas fa-edit mr-2"></i>
+                                                                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                                                                        </svg>
                                                                         Edit Teacher Assignment
                                                                     </h3>
-                                                                    <button type="button" class="text-white"
-                                                                            data-modal-close="editAssignmentModal<?= $assignment['id'] ?>">
-                                                                        <i class="fas fa-times"></i>
+                                                                    <button type="button" class="text-white hover:text-gray-200" data-modal-close="editAssignmentModal<?= $assignment['id'] ?>">
+                                                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                                                        </svg>
                                                                     </button>
                                                                 </div>
                                                             </div>
@@ -528,30 +252,28 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                                                                 
                                                                 <div class="mb-4">
                                                                     <label class="block text-sm font-medium text-gray-700 mb-2">Subject</label>
-                                                                    <input type="text" class="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50" 
-                                                                           value="<?= htmlspecialchars($assignment['subject_name']) ?> (<?= htmlspecialchars($assignment['subject_code']) ?>)" 
-                                                                           disabled>
+                                                                    <input type="text" class="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50" value="<?= htmlspecialchars($assignment['subject_name']) ?> (<?= htmlspecialchars($assignment['subject_code']) ?>)" disabled>
                                                                 </div>
                                                                 
                                                                 <div class="mb-6">
                                                                     <label class="block text-sm font-medium text-gray-700 mb-2">Select Teacher</label>
-                                                                    <select name="teacher_id" class="w-full px-3 py-2 border border-gray-300 rounded-lg" required>
+                                                                    <select name="teacher_id" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary" required>
                                                                         <?php foreach ($teachers as $teacher): ?>
                                                                         <option value="<?= $teacher['id'] ?>" <?= $teacher['id'] == $assignment['teacher_id'] ? 'selected' : '' ?>>
-                                                                            <?= htmlspecialchars($teacher['first_name'] . ' ' . $teacher['last_name']) ?> 
-                                                                            (<?= htmlspecialchars($teacher['email']) ?>)
+                                                                            <?= htmlspecialchars($teacher['first_name'] . ' ' . $teacher['last_name']) ?> (<?= htmlspecialchars($teacher['email']) ?>)
                                                                         </option>
                                                                         <?php endforeach; ?>
                                                                     </select>
                                                                 </div>
                                                                 
                                                                 <div class="flex justify-end space-x-3">
-                                                                    <button type="button" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg"
-                                                                            data-modal-close="editAssignmentModal<?= $assignment['id'] ?>">
+                                                                    <button type="button" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors" data-modal-close="editAssignmentModal<?= $assignment['id'] ?>">
                                                                         Cancel
                                                                     </button>
-                                                                    <button type="submit" name="assign_teacher" class="px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg">
-                                                                        <i class="fas fa-save mr-1"></i>
+                                                                    <button type="submit" name="assign_teacher" class="px-4 py-2 bg-gradient-to-r from-primary to-primary-dark text-white rounded-lg hover:from-primary-dark hover:to-primary transition-colors">
+                                                                        <svg class="w-4 h-4 mr-1 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                                                        </svg>
                                                                         Update Assignment
                                                                     </button>
                                                                 </div>
@@ -559,23 +281,24 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                                                         </div>
                                                     </div>
                                                 </div>
-                                                
+
                                                 <!-- Remove Assignment Modal -->
                                                 <div id="removeAssignmentModal<?= $assignment['id'] ?>" class="fixed inset-0 z-50 hidden overflow-y-auto">
                                                     <div class="flex items-center justify-center min-h-screen p-4">
-                                                        <div class="fixed inset-0 bg-black bg-opacity-50"
-                                                             data-modal-close="removeAssignmentModal<?= $assignment['id'] ?>"></div>
-                                                        
+                                                        <div class="fixed inset-0 bg-black bg-opacity-50" data-modal-close="removeAssignmentModal<?= $assignment['id'] ?>"></div>
                                                         <div class="bg-white rounded-xl shadow-xl max-w-md w-full mx-auto z-10 overflow-hidden">
                                                             <div class="bg-gradient-to-r from-red-600 to-red-700 p-5">
                                                                 <div class="flex justify-between items-center">
                                                                     <h3 class="text-lg font-bold text-white flex items-center">
-                                                                        <i class="fas fa-trash mr-2"></i>
+                                                                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                                                        </svg>
                                                                         Remove Teacher Assignment
                                                                     </h3>
-                                                                    <button type="button" class="text-white"
-                                                                            data-modal-close="removeAssignmentModal<?= $assignment['id'] ?>">
-                                                                        <i class="fas fa-times"></i>
+                                                                    <button type="button" class="text-white hover:text-gray-200" data-modal-close="removeAssignmentModal<?= $assignment['id'] ?>">
+                                                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                                                        </svg>
                                                                     </button>
                                                                 </div>
                                                             </div>
@@ -584,24 +307,26 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                                                                 
                                                                 <div class="text-center mb-6">
                                                                     <div class="w-16 h-16 mx-auto bg-red-100 rounded-full flex items-center justify-center mb-4">
-                                                                        <i class="fas fa-exclamation-triangle text-red-500 text-2xl"></i>
+                                                                        <svg class="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                                                                        </svg>
                                                                     </div>
                                                                     
                                                                     <p class="text-gray-700 mb-2">
-                                                                        Are you sure you want to remove <strong><?= htmlspecialchars($assignment['first_name'] . ' ' . $assignment['last_name']) ?></strong> 
-                                                                        from teaching <strong><?= htmlspecialchars($assignment['subject_name']) ?></strong>?
+                                                                        Are you sure you want to remove <strong><?= htmlspecialchars($assignment['first_name'] . ' ' . $assignment['last_name']) ?></strong> from teaching <strong><?= htmlspecialchars($assignment['subject_name']) ?></strong>?
                                                                     </p>
                                                                     
                                                                     <p class="text-red-600 text-sm">This action cannot be undone.</p>
                                                                 </div>
                                                                 
                                                                 <div class="flex justify-end space-x-3">
-                                                                    <button type="button" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg"
-                                                                            data-modal-close="removeAssignmentModal<?= $assignment['id'] ?>">
+                                                                    <button type="button" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors" data-modal-close="removeAssignmentModal<?= $assignment['id'] ?>">
                                                                         Cancel
                                                                     </button>
-                                                                    <button type="submit" name="remove_assignment" class="px-4 py-2 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-lg">
-                                                                        <i class="fas fa-trash mr-1"></i>
+                                                                    <button type="submit" name="remove_assignment" class="px-4 py-2 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-lg hover:from-red-700 hover:to-red-800 transition-colors">
+                                                                        <svg class="w-4 h-4 mr-1 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                                                        </svg>
                                                                         Remove Assignment
                                                                     </button>
                                                                 </div>
@@ -625,7 +350,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     <div class="bg-white rounded-xl shadow-md overflow-hidden">
                         <div class="bg-gradient-to-r from-purple-600 to-purple-700 p-5">
                             <h2 class="text-lg font-bold text-white flex items-center">
-                                <i class="fas fa-user-plus mr-2"></i>
+                                <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"></path>
+                                </svg>
                                 Assign Teacher
                             </h2>
                         </div>
@@ -633,12 +360,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                             <form method="post">
                                 <div class="mb-4">
                                     <label class="block text-sm font-medium text-gray-700 mb-2">Select Subject</label>
-                                    <select name="subject_id" class="w-full px-3 py-2 border border-gray-300 rounded-lg" required>
+                                    <select name="subject_id" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary" required>
                                         <option value="">-- Select Subject --</option>
                                         <?php foreach ($subjects as $subject): ?>
                                         <option value="<?= $subject['id'] ?>">
-                                            <?= htmlspecialchars($subject['subject_name']) ?> 
-                                            (<?= htmlspecialchars($subject['subject_code']) ?>)
+                                            <?= htmlspecialchars($subject['subject_name']) ?> (<?= htmlspecialchars($subject['subject_code']) ?>)
                                         </option>
                                         <?php endforeach; ?>
                                     </select>
@@ -646,28 +372,30 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                                 
                                 <div class="mb-6">
                                     <label class="block text-sm font-medium text-gray-700 mb-2">Select Teacher</label>
-                                    <select name="teacher_id" class="w-full px-3 py-2 border border-gray-300 rounded-lg" required>
+                                    <select name="teacher_id" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary" required>
                                         <option value="">-- Select Teacher --</option>
                                         <?php foreach ($teachers as $teacher): ?>
                                         <option value="<?= $teacher['id'] ?>">
-                                            <?= htmlspecialchars($teacher['first_name'] . ' ' . $teacher['last_name']) ?> 
-                                            (<?= htmlspecialchars($teacher['email']) ?>)
+                                            <?= htmlspecialchars($teacher['first_name'] . ' ' . $teacher['last_name']) ?> (<?= htmlspecialchars($teacher['email']) ?>)
                                         </option>
                                         <?php endforeach; ?>
                                     </select>
                                 </div>
                                 
-                                <button type="submit" name="assign_teacher" class="w-full px-4 py-2 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-lg flex items-center justify-center">
-                                    <i class="fas fa-user-plus mr-2"></i>
+                                <button type="submit" name="assign_teacher" class="w-full px-4 py-2 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-lg hover:from-purple-700 hover:to-purple-800 transition-colors flex items-center justify-center">
+                                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"></path>
+                                    </svg>
                                     Assign Teacher
                                 </button>
                             </form>
                             
                             <div class="my-6 border-t border-gray-200"></div>
                             
-                            <button type="button" class="w-full px-4 py-2 bg-gradient-to-r from-cyan-500 to-blue-500 text-white rounded-lg flex items-center justify-center"
-                                    data-modal-target="addSubjectModal">
-                                <i class="fas fa-plus mr-2"></i>
+                            <button type="button" class="w-full px-4 py-2 bg-gradient-to-r from-primary to-primary-dark text-white rounded-lg hover:from-primary-dark hover:to-primary transition-colors flex items-center justify-center" data-modal-target="addSubjectModal">
+                                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                                </svg>
                                 Add New Subject
                             </button>
                         </div>
@@ -678,19 +406,20 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             <!-- Add Subject Modal -->
             <div id="addSubjectModal" class="fixed inset-0 z-50 hidden overflow-y-auto">
                 <div class="flex items-center justify-center min-h-screen p-4">
-                    <div class="fixed inset-0 bg-black bg-opacity-50"
-                         data-modal-close="addSubjectModal"></div>
-                    
+                    <div class="fixed inset-0 bg-black bg-opacity-50" data-modal-close="addSubjectModal"></div>
                     <div class="bg-white rounded-xl shadow-xl max-w-md w-full mx-auto z-10 overflow-hidden">
-                        <div class="bg-gradient-to-r from-cyan-500 to-blue-500 p-5">
+                        <div class="bg-gradient-to-r from-primary to-primary-dark p-5">
                             <div class="flex justify-between items-center">
                                 <h3 class="text-lg font-bold text-white flex items-center">
-                                    <i class="fas fa-book mr-2"></i>
+                                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+                                    </svg>
                                     Add New Subject
                                 </h3>
-                                <button type="button" class="text-white"
-                                        data-modal-close="addSubjectModal">
-                                    <i class="fas fa-times"></i>
+                                <button type="button" class="text-white hover:text-gray-200" data-modal-close="addSubjectModal">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                    </svg>
                                 </button>
                             </div>
                         </div>
@@ -699,24 +428,30 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                                 <label class="block text-sm font-medium text-gray-700 mb-2">
                                     Subject Name <span class="text-red-500">*</span>
                                 </label>
-                                <input type="text" name="subject_name" class="w-full px-3 py-2 border border-gray-300 rounded-lg" required>
+                                <input type="text" name="subject_name" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary" required>
                             </div>
                             
-                            <div class="mb-6">
+                            <div class="mb-4">
                                 <label class="block text-sm font-medium text-gray-700 mb-2">
                                     Subject Code <span class="text-red-500">*</span>
                                 </label>
-                                <input type="text" name="subject_code" class="w-full px-3 py-2 border border-gray-300 rounded-lg" required>
+                                <input type="text" name="subject_code" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary" required>
                                 <p class="mt-1 text-sm text-gray-500">Must be unique across all subjects</p>
                             </div>
                             
+                            <div class="mb-6">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                                <textarea name="description" rows="3" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary"></textarea>
+                            </div>
+                            
                             <div class="flex justify-end space-x-3">
-                                <button type="button" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg"
-                                        data-modal-close="addSubjectModal">
+                                <button type="button" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors" data-modal-close="addSubjectModal">
                                     Cancel
                                 </button>
-                                <button type="submit" name="add_subject" class="px-4 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg">
-                                    <i class="fas fa-plus mr-1"></i>
+                                <button type="submit" name="add_subject" class="px-4 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg hover:from-green-600 hover:to-green-700 transition-colors">
+                                    <svg class="w-4 h-4 mr-1 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                                    </svg>
                                     Add Subject
                                 </button>
                             </div>
@@ -728,19 +463,20 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             <!-- Bulk Assign Modal -->
             <div id="bulkAssignModal" class="fixed inset-0 z-50 hidden overflow-y-auto">
                 <div class="flex items-center justify-center min-h-screen p-4">
-                    <div class="fixed inset-0 bg-black bg-opacity-50"
-                         data-modal-close="bulkAssignModal"></div>
-                    
+                    <div class="fixed inset-0 bg-black bg-opacity-50" data-modal-close="bulkAssignModal"></div>
                     <div class="bg-white rounded-xl shadow-xl max-w-3xl w-full mx-auto z-10 overflow-hidden">
-                        <div class="bg-gradient-to-r from-blue-600 to-blue-700 p-5">
+                        <div class="bg-gradient-to-r from-primary to-primary-dark p-5">
                             <div class="flex justify-between items-center">
                                 <h3 class="text-lg font-bold text-white flex items-center">
-                                    <i class="fas fa-tasks mr-2"></i>
+                                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+                                    </svg>
                                     Bulk Teacher Assignment
                                 </h3>
-                                <button type="button" class="text-white"
-                                        data-modal-close="bulkAssignModal">
-                                    <i class="fas fa-times"></i>
+                                <button type="button" class="text-white hover:text-gray-200" data-modal-close="bulkAssignModal">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                    </svg>
                                 </button>
                             </div>
                         </div>
@@ -751,12 +487,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                             
                             <div class="mb-6">
                                 <label class="block text-sm font-medium text-gray-700 mb-2">Select Teacher</label>
-                                <select id="bulkTeacher" name="bulk_teacher_id" class="w-full px-3 py-2 border border-gray-300 rounded-lg" required>
+                                <select id="bulkTeacher" name="bulk_teacher_id" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary" required>
                                     <option value="">-- Select Teacher --</option>
                                     <?php foreach ($teachers as $teacher): ?>
                                     <option value="<?= $teacher['id'] ?>">
-                                        <?= htmlspecialchars($teacher['first_name'] . ' ' . $teacher['last_name']) ?> 
-                                        (<?= htmlspecialchars($teacher['email']) ?>)
+                                        <?= htmlspecialchars($teacher['first_name'] . ' ' . $teacher['last_name']) ?> (<?= htmlspecialchars($teacher['email']) ?>)
                                     </option>
                                     <?php endforeach; ?>
                                 </select>
@@ -768,7 +503,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                                         <tr>
                                             <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-12">
                                                 <div class="flex items-center">
-                                                    <input id="selectAll" class="h-4 w-4 text-blue-600 border-gray-300 rounded" type="checkbox">
+                                                    <input id="selectAll" class="h-4 w-4 text-primary border-gray-300 rounded focus:ring-primary" type="checkbox">
                                                 </div>
                                             </th>
                                             <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Subject</th>
@@ -776,7 +511,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                                         </tr>
                                     </thead>
                                     <tbody class="bg-white divide-y divide-gray-200">
-                                        <?php foreach ($subjects as $subject): 
+                                        <?php foreach ($subjects as $subject):
                                             // Find current assignment for this subject
                                             $current_teacher = null;
                                             foreach ($assignments as $assignment) {
@@ -786,23 +521,22 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                                                 }
                                             }
                                         ?>
-                                        <tr>
+                                        <tr class="hover:bg-gray-50">
                                             <td class="px-6 py-4 whitespace-nowrap">
                                                 <div class="flex items-center">
-                                                    <input class="subject-checkbox h-4 w-4 text-blue-600 border-gray-300 rounded" 
-                                                           type="checkbox" name="bulk_subjects[]" value="<?= $subject['id'] ?>">
+                                                    <input class="subject-checkbox h-4 w-4 text-primary border-gray-300 rounded focus:ring-primary" type="checkbox" name="bulk_subjects[]" value="<?= $subject['id'] ?>">
                                                 </div>
                                             </td>
                                             <td class="px-6 py-4 whitespace-nowrap">
-                                                <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
-                                                    <?= htmlspecialchars($subject['subject_name']) ?> 
-                                                    <span class="ml-1 text-xs text-blue-600">(<?= htmlspecialchars($subject['subject_code']) ?>)</span>
+                                                <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-primary-light text-primary">
+                                                    <?= htmlspecialchars($subject['subject_name']) ?>
+                                                    <span class="ml-1 text-xs text-primary-dark">(<?= htmlspecialchars($subject['subject_code']) ?>)</span>
                                                 </span>
                                             </td>
                                             <td class="px-6 py-4 whitespace-nowrap">
                                                 <?php if ($current_teacher): ?>
                                                 <div class="flex items-center">
-                                                    <div class="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-white font-medium text-sm mr-3">
+                                                    <div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white font-medium text-sm mr-3">
                                                         <?= strtoupper(substr($current_teacher['first_name'], 0, 1) . substr($current_teacher['last_name'], 0, 1)) ?>
                                                     </div>
                                                     <div class="text-sm font-medium text-gray-900">
@@ -820,12 +554,13 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                             </div>
                             
                             <div class="flex justify-end space-x-3">
-                                <button type="button" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg"
-                                        data-modal-close="bulkAssignModal">
+                                <button type="button" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors" data-modal-close="bulkAssignModal">
                                     Cancel
                                 </button>
-                                <button type="submit" id="bulkAssignBtn" name="bulk_assign" class="px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg" disabled>
-                                    <i class="fas fa-save mr-1"></i>
+                                <button type="submit" id="bulkAssignBtn" name="bulk_assign" class="px-4 py-2 bg-gradient-to-r from-primary to-primary-dark text-white rounded-lg hover:from-primary-dark hover:to-primary transition-colors" disabled>
+                                    <svg class="w-4 h-4 mr-1 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                    </svg>
                                     Assign Selected Subjects
                                 </button>
                             </div>
@@ -835,9 +570,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             </div>
         </div>
     </div>
- <!-- Include sidebar -->
-        <?php include '../include/sidebar.php'; ?>
-        
+
     <script>
         // Modal functionality
         document.addEventListener('DOMContentLoaded', function() {

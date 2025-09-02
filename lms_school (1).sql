@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Jun 21, 2025 at 09:40 AM
+-- Generation Time: Jul 24, 2025 at 07:13 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -377,7 +377,10 @@ INSERT INTO `attendance` (`id`, `student_id`, `class_id`, `teacher_id`, `attenda
 (62, 6, 1, 11, '2025-06-20', NULL, NULL, NULL, NULL, 'absent', NULL, NULL, '', '2025-06-20 15:05:04', '2025-06-20 15:05:04'),
 (66, 1, 1, 11, '2025-06-21', NULL, NULL, NULL, NULL, 'absent', NULL, NULL, '', '2025-06-21 06:50:06', '2025-06-21 06:50:06'),
 (67, 2, 1, 11, '2025-06-21', NULL, NULL, NULL, NULL, 'absent', NULL, NULL, '', '2025-06-21 06:50:06', '2025-06-21 06:50:06'),
-(68, 6, 1, 11, '2025-06-21', NULL, NULL, NULL, NULL, 'absent', NULL, NULL, '', '2025-06-21 06:50:06', '2025-06-21 06:50:06');
+(68, 6, 1, 11, '2025-06-21', NULL, NULL, NULL, NULL, 'absent', NULL, NULL, '', '2025-06-21 06:50:06', '2025-06-21 06:50:06'),
+(75, 1, 1, 11, '2025-07-24', NULL, NULL, NULL, NULL, 'present', NULL, NULL, '', '2025-07-24 14:33:41', '2025-07-24 14:33:41'),
+(76, 2, 1, 11, '2025-07-24', NULL, NULL, NULL, NULL, 'absent', NULL, NULL, '', '2025-07-24 14:33:41', '2025-07-24 14:33:41'),
+(77, 6, 1, 11, '2025-07-24', NULL, NULL, NULL, NULL, 'present', NULL, NULL, '', '2025-07-24 14:33:41', '2025-07-24 14:33:41');
 
 --
 -- Triggers `attendance`
@@ -487,13 +490,17 @@ CREATE TABLE `class_subject_teachers` (
 
 INSERT INTO `class_subject_teachers` (`id`, `class_id`, `subject_id`, `teacher_id`, `academic_year_id`, `assigned_date`, `is_active`, `created_at`) VALUES
 (7, 1, 1, 2, 1, '2024-04-01', 1, '2025-06-02 02:52:54'),
-(8, 1, 2, 3, 1, '2024-04-01', 1, '2025-06-02 02:52:54'),
+(8, 1, 2, 12, 1, '2025-07-24', 1, '2025-06-02 02:52:54'),
 (9, 2, 3, 4, 1, '2024-04-01', 1, '2025-06-02 02:52:54'),
 (10, 2, 4, 2, 1, '2024-04-01', 1, '2025-06-02 02:52:54'),
 (11, 3, 5, 3, 1, '2024-04-01', 1, '2025-06-02 02:52:54'),
 (14, 5, 6, 11, 1, '2025-06-19', 1, '2025-06-19 09:21:48'),
 (15, 1, 4, 11, 1, '2025-06-19', 1, '2025-06-19 17:11:37'),
-(16, 1, 3, 12, 1, '2025-06-20', 1, '2025-06-20 07:03:39');
+(16, 1, 3, 12, 1, '2025-06-20', 1, '2025-06-20 07:03:39'),
+(17, 1, 13, 25, 1, '2025-07-24', 1, '2025-07-24 14:45:26'),
+(18, 1, 15, 25, 1, '2025-07-24', 1, '2025-07-24 14:45:40'),
+(19, 1, 17, 12, 1, '2025-07-24', 1, '2025-07-24 15:18:40'),
+(20, 3, 1, 27, 1, '2025-07-24', 1, '2025-07-24 16:39:09');
 
 -- --------------------------------------------------------
 
@@ -810,7 +817,7 @@ INSERT INTO `leave_applications` (`id`, `user_id`, `user_type`, `leave_type`, `f
 (5, 10, 'student', 'sick', '2025-06-02', NULL, NULL, NULL, '2025-06-03', NULL, NULL, NULL, 2, 'due to treatment', 'reer', NULL, 'approved', '2025-06-02 04:31:36', 1, '2025-06-02 16:20:59', '', ''),
 (6, 10, 'student', 'personal', '2025-06-02', NULL, NULL, NULL, '2025-06-03', NULL, NULL, NULL, 2, 'tested', '', 'uploads/leave_attachments/10_1748839848.jpeg', 'approved', '2025-06-02 04:50:57', 1, '2025-06-02 16:18:46', '', ''),
 (7, 10, 'student', 'sick', '2025-06-19', NULL, NULL, NULL, '2025-06-21', NULL, NULL, NULL, 3, 'feaver', '', 'uploads/leave_attachments/10_1750353180.png', 'rejected', '2025-06-19 17:13:01', 23, '2025-06-20 05:56:20', 'not applicable', ''),
-(8, 5, 'student', 'emergency', '2025-06-21', NULL, NULL, NULL, '2025-06-21', NULL, NULL, NULL, 1, 'due to new bir', '', 'uploads/leave_attachments/5_1750489717.png', 'pending', '2025-06-21 07:08:41', NULL, NULL, NULL, '976547026');
+(8, 5, 'student', 'emergency', '2025-06-21', NULL, NULL, NULL, '2025-06-21', NULL, NULL, NULL, 1, 'due to new bir', '', 'uploads/leave_attachments/5_1750489717.png', 'approved', '2025-06-21 07:08:41', 24, '2025-07-24 17:07:00', '', '976547026');
 
 -- --------------------------------------------------------
 
@@ -1292,20 +1299,22 @@ CREATE TABLE `students` (
   `guardian_phone` varchar(20) DEFAULT NULL,
   `guardian_email` varchar(100) DEFAULT NULL,
   `is_active` tinyint(1) DEFAULT 1,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `status` enum('active','graduated','transferred','dropped') DEFAULT 'active',
+  `graduation_date` date DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data for table `students`
 --
 
-INSERT INTO `students` (`id`, `user_id`, `student_id`, `admission_date`, `date_of_birth`, `blood_group`, `emergency_contact`, `guardian_name`, `guardian_phone`, `guardian_email`, `is_active`, `created_at`) VALUES
-(1, 5, 'STU2024001', '2024-04-01', '2010-05-15', 'A+', NULL, 'Robert Wilson', '9841234580', 'robert.wilson@email.com', 1, '2025-06-02 02:52:54'),
-(2, 6, 'STU2024002', '2024-04-01', '2010-08-22', 'B+', NULL, 'Linda Anderson', '9841234581', 'linda.anderson@email.com', 1, '2025-06-02 02:52:54'),
-(3, 7, 'STU2024003', '2024-04-01', '2010-12-10', 'O+', NULL, 'Carlos Martinez', '9841234582', 'carlos.martinez@email.com', 1, '2025-06-02 02:52:54'),
-(4, 8, 'STU2024004', '2024-04-01', '2011-03-18', 'AB+', NULL, 'Maria Garcia', '9841234583', 'maria.garcia@email.com', 1, '2025-06-02 02:52:54'),
-(5, 9, 'STU2024005', '2024-04-01', '2011-07-25', 'A-', NULL, 'Jose Rodriguez', '9841234584', 'jose.rodriguez@email.com', 1, '2025-06-02 02:52:54'),
-(6, 10, 'STU2025006', '2025-06-02', '2025-06-02', 'A+', '', 'akadsdd', '324324', 'dadss@gmail.com', 1, '2025-06-02 04:09:12');
+INSERT INTO `students` (`id`, `user_id`, `student_id`, `admission_date`, `date_of_birth`, `blood_group`, `emergency_contact`, `guardian_name`, `guardian_phone`, `guardian_email`, `is_active`, `created_at`, `status`, `graduation_date`) VALUES
+(1, 5, 'STU2024001', '2024-04-01', '2010-05-15', 'A+', NULL, 'Robert Wilson', '9841234580', 'robert.wilson@email.com', 1, '2025-06-02 02:52:54', 'active', NULL),
+(2, 6, 'STU2024002', '2024-04-01', '2010-08-22', 'B+', NULL, 'Linda Anderson', '9841234581', 'linda.anderson@email.com', 1, '2025-06-02 02:52:54', 'active', NULL),
+(3, 7, 'STU2024003', '2024-04-01', '2010-12-10', 'O+', NULL, 'Carlos Martinez', '9841234582', 'carlos.martinez@email.com', 1, '2025-06-02 02:52:54', 'active', NULL),
+(4, 8, 'STU2024004', '2024-04-01', '2011-03-18', 'AB+', NULL, 'Maria Garcia', '9841234583', 'maria.garcia@email.com', 1, '2025-06-02 02:52:54', 'active', NULL),
+(5, 9, 'STU2024005', '2024-04-01', '2011-07-25', 'A-', NULL, 'Jose Rodriguez', '9841234584', 'jose.rodriguez@email.com', 1, '2025-06-02 02:52:54', 'active', NULL),
+(6, 10, 'STU2025006', '2025-06-02', '2025-06-02', 'A+', '', 'akadsdd', '324324', 'dadss@gmail.com', 1, '2025-06-02 04:09:12', 'active', NULL);
 
 -- --------------------------------------------------------
 
@@ -1329,7 +1338,7 @@ CREATE TABLE `student_classes` (
 --
 
 INSERT INTO `student_classes` (`id`, `student_id`, `class_id`, `academic_year_id`, `enrollment_date`, `status`, `created_at`, `updated_at`) VALUES
-(1, 1, 1, 1, '2024-04-01', 'enrolled', '2025-06-02 04:27:42', '2025-06-02 04:27:42'),
+(1, 1, 1, 1, '2024-04-01', '', '2025-06-02 04:27:42', '2025-07-24 15:26:02'),
 (2, 2, 1, 1, '2024-04-01', 'enrolled', '2025-06-02 04:27:42', '2025-06-02 04:27:42'),
 (3, 3, 2, 1, '2024-04-01', 'enrolled', '2025-06-02 04:27:42', '2025-06-02 04:27:42'),
 (4, 4, 2, 1, '2024-04-01', 'enrolled', '2025-06-02 04:27:42', '2025-06-02 04:27:42'),
@@ -1412,6 +1421,41 @@ CREATE TABLE `student_grades` (
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `student_graduations`
+--
+
+CREATE TABLE `student_graduations` (
+  `id` int(11) NOT NULL,
+  `student_id` int(11) NOT NULL,
+  `academic_year_id` int(11) NOT NULL,
+  `graduation_date` date NOT NULL,
+  `status` enum('graduated','completed') DEFAULT 'graduated',
+  `certificate_number` varchar(50) DEFAULT NULL,
+  `notes` text DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `student_promotions`
+--
+
+CREATE TABLE `student_promotions` (
+  `id` int(11) NOT NULL,
+  `student_id` int(11) NOT NULL,
+  `from_class_id` int(11) DEFAULT NULL,
+  `to_class_id` int(11) DEFAULT NULL,
+  `academic_year_id` int(11) NOT NULL,
+  `promotion_date` date NOT NULL,
+  `status` enum('promoted','graduated','manual_promotion','failed') DEFAULT 'promoted',
+  `notes` text DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
 
@@ -1570,7 +1614,55 @@ INSERT INTO `system_logs` (`id`, `user_id`, `action`, `table_name`, `record_id`,
 (90, 5, '5', 'leave_application_submitted', 0, '\"8\"', NULL, '192.168.1.72', 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_3_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.3 Mobile/15E148 Safari/604.1', '2025-06-21 07:08:41'),
 (91, 23, 'user_login', NULL, NULL, NULL, NULL, '192.168.1.72', 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_3_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.3 Mobile/15E148 Safari/604.1', '2025-06-21 07:22:58'),
 (92, 23, 'teacher_created', 'users', 25, NULL, NULL, '192.168.1.72', 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_3_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.3 Mobile/15E148 Safari/604.1', '2025-06-21 07:33:57'),
-(93, 25, 'user_login', NULL, NULL, NULL, NULL, '192.168.1.72', 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_3_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.3 Mobile/15E148 Safari/604.1', '2025-06-21 07:35:57');
+(93, 25, 'user_login', NULL, NULL, NULL, NULL, '192.168.1.72', 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_3_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.3 Mobile/15E148 Safari/604.1', '2025-06-21 07:35:57'),
+(94, 5, 'user_login', NULL, NULL, NULL, NULL, '192.168.1.72', 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_3_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.3 Mobile/15E148 Safari/604.1', '2025-07-24 14:09:50'),
+(95, 11, 'user_login', NULL, NULL, NULL, NULL, '192.168.1.72', 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_3_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Brave/1 Mobile/15E148 Safari/604.1', '2025-07-24 14:12:16'),
+(96, 24, 'user_login', NULL, NULL, NULL, NULL, '192.168.1.74', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:128.0) Gecko/20100101 Firefox/128.0', '2025-07-24 14:17:02'),
+(97, 24, 'user_login', NULL, NULL, NULL, NULL, '192.168.1.72', 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_3_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.3 Mobile/15E148 Safari/604.1', '2025-07-24 14:17:20'),
+(98, 11, 'user_login', NULL, NULL, NULL, NULL, '192.168.1.72', 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_3_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Brave/1 Mobile/15E148 Safari/604.1', '2025-07-24 14:32:49'),
+(99, 11, 'attendance_recorded', 'attendance', NULL, NULL, '{\"class_id\":1,\"date\":\"2025-07-24\"}', '192.168.1.72', 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_3_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Brave/1 Mobile/15E148 Safari/604.1', '2025-07-24 14:33:18'),
+(100, 11, 'attendance_recorded', 'attendance', NULL, NULL, '{\"class_id\":1,\"date\":\"2025-07-24\"}', '192.168.1.72', 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_3_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Brave/1 Mobile/15E148 Safari/604.1', '2025-07-24 14:33:39'),
+(101, 11, 'attendance_recorded', 'attendance', NULL, NULL, '{\"class_id\":1,\"date\":\"2025-07-24\"}', '192.168.1.72', 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_3_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Brave/1 Mobile/15E148 Safari/604.1', '2025-07-24 14:33:41'),
+(102, 24, 'teacher_assigned', 'class_subject_teachers', 2, NULL, NULL, '192.168.1.72', 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_3_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.3 Mobile/15E148 Safari/604.1', '2025-07-24 14:45:16'),
+(103, 24, 'teacher_assigned', 'class_subject_teachers', 0, NULL, NULL, '192.168.1.72', 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_3_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.3 Mobile/15E148 Safari/604.1', '2025-07-24 14:45:16'),
+(104, 24, 'teacher_assigned', 'class_subject_teachers', 13, NULL, NULL, '192.168.1.72', 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_3_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.3 Mobile/15E148 Safari/604.1', '2025-07-24 14:45:26'),
+(105, 24, 'teacher_assigned', 'class_subject_teachers', 0, NULL, NULL, '192.168.1.72', 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_3_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.3 Mobile/15E148 Safari/604.1', '2025-07-24 14:45:26'),
+(106, 24, 'teacher_assigned', 'class_subject_teachers', 15, NULL, NULL, '192.168.1.72', 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_3_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.3 Mobile/15E148 Safari/604.1', '2025-07-24 14:45:40'),
+(107, 24, 'teacher_assigned', 'class_subject_teachers', 0, NULL, NULL, '192.168.1.72', 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_3_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.3 Mobile/15E148 Safari/604.1', '2025-07-24 14:45:40'),
+(108, 5, 'user_login', NULL, NULL, NULL, NULL, '192.168.1.73', 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_3_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.3 Mobile/15E148 Safari/604.1', '2025-07-24 14:58:18'),
+(109, 24, 'teacher_assigned', 'class_subject_teachers', 17, NULL, NULL, '192.168.1.74', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:128.0) Gecko/20100101 Firefox/128.0', '2025-07-24 15:18:40'),
+(110, 5, 'user_login', NULL, NULL, NULL, NULL, '192.168.1.74', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36', '2025-07-24 15:59:49'),
+(111, 24, 'user_login', NULL, NULL, NULL, NULL, '192.168.1.74', 'Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X) AppleWebKit/603.1.30 (KHTML, like Gecko) Version/17.5 Mobile/15A5370a Safari/602.1', '2025-07-24 16:37:39'),
+(112, 24, 'password_reset', 'users', 26, NULL, NULL, '192.168.1.74', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:128.0) Gecko/20100101 Firefox/128.0', '2025-07-24 16:53:16'),
+(113, 24, 'user_deactivated', 'users', 10, NULL, NULL, '192.168.1.74', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:128.0) Gecko/20100101 Firefox/128.0', '2025-07-24 16:55:39'),
+(114, 24, 'leave_reject', 'leave_applications', 8, NULL, NULL, '192.168.1.74', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:128.0) Gecko/20100101 Firefox/128.0', '2025-07-24 17:06:43'),
+(115, 24, 'leave_reject', 'leave_applications', 8, NULL, NULL, '192.168.1.74', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:128.0) Gecko/20100101 Firefox/128.0', '2025-07-24 17:06:55'),
+(116, 24, 'leave_approve', 'leave_applications', 8, NULL, NULL, '192.168.1.74', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:128.0) Gecko/20100101 Firefox/128.0', '2025-07-24 17:07:00');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `system_settings`
+--
+
+CREATE TABLE `system_settings` (
+  `id` int(11) NOT NULL,
+  `setting_key` varchar(100) NOT NULL,
+  `setting_value` text DEFAULT NULL,
+  `description` text DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `system_settings`
+--
+
+INSERT INTO `system_settings` (`id`, `setting_key`, `setting_value`, `description`, `created_at`, `updated_at`) VALUES
+(1, 'promotion_month', '4', 'Month for automatic promotion (4 = April/Baisakh)', '2025-07-24 17:13:24', '2025-07-24 17:13:24'),
+(2, 'promotion_day', '14', 'Day for automatic promotion (Baisakh 1 usually falls on April 14)', '2025-07-24 17:13:24', '2025-07-24 17:13:24'),
+(3, 'auto_promotion_enabled', '1', 'Enable automatic promotion', '2025-07-24 17:13:24', '2025-07-24 17:13:24'),
+(4, 'max_class_level', '12', 'Maximum class level before graduation', '2025-07-24 17:13:24', '2025-07-24 17:13:24');
 
 -- --------------------------------------------------------
 
@@ -1692,7 +1784,8 @@ CREATE TABLE `teacher_profiles` (
 --
 
 INSERT INTO `teacher_profiles` (`id`, `user_id`, `employee_id`, `qualification`, `experience_years`, `specialization`, `joining_date`, `salary`, `status`, `created_at`, `updated_at`) VALUES
-(1, 25, 'EMP2025006', 'Master', 2, 'Php', '2025-06-21', 22000.00, 'active', '2025-06-21 07:33:57', '2025-06-21 07:33:57');
+(1, 25, 'EMP2025006', 'Master', 2, 'Php', '2025-06-21', 22000.00, 'active', '2025-06-21 07:33:57', '2025-06-21 07:33:57'),
+(2, 26, '', 'Master', 12, 'C++', '2025-07-24', 12222.00, 'active', '2025-07-24 16:33:58', '2025-07-24 16:33:58');
 
 -- --------------------------------------------------------
 
@@ -1753,7 +1846,7 @@ INSERT INTO `users` (`id`, `username`, `email`, `password_hash`, `password_reset
 (7, 'student003', 'student003@school.com', '$2y$10$TKh8H1.PfQx37YgCzwiKb.KjNyWgaHb9cbcoQgdIVFlYg7B77UdFm', 0, 'Carol', 'Martinez', '9841234573', NULL, NULL, 3, 1, '2025-06-02 02:52:54', '2025-06-02 02:52:54'),
 (8, 'student004', 'student004@school.com', '$2y$10$TKh8H1.PfQx37YgCzwiKb.KjNyWgaHb9cbcoQgdIVFlYg7B77UdFm', 0, 'David', 'Garcia', '9841234574', NULL, NULL, 3, 1, '2025-06-02 02:52:54', '2025-06-02 02:52:54'),
 (9, 'student005', 'student005@school.com', '$2y$10$TKh8H1.PfQx37YgCzwiKb.KjNyWgaHb9cbcoQgdIVFlYg7B77UdFm', 0, 'Eva', 'Rodriguez', '9841234575', NULL, NULL, 3, 1, '2025-06-02 02:52:54', '2025-06-02 02:52:54'),
-(10, 'student006', 'kapil@gmail.com', '$2y$10$eaMv8d06K/aN6refEDTIMOjXZj.Ap/Ern6yMXNBOnNlTQYQIVwetK', 0, 'kapil', 'Tamang', '97675655', 'biratchowl', NULL, 3, 1, '2025-06-02 04:09:12', '2025-06-13 03:51:58'),
+(10, 'student006', 'kapil@gmail.com', '$2y$10$eaMv8d06K/aN6refEDTIMOjXZj.Ap/Ern6yMXNBOnNlTQYQIVwetK', 0, 'kapil', 'Tamang', '97675655', 'biratchowl', NULL, 3, 0, '2025-06-02 04:09:12', '2025-07-24 16:55:39'),
 (11, 'teacher004', 'prasanga@gmail.com', '$2y$10$V992qAfjM42ZAFtc3DArB.gJx81Jyv9jbU4vwiZmkvl7lHv33wMKi', 0, 'prasanga', 'pokharel', '9765470926', 'test', 'profile_11_1750433887.png', 2, 1, '2025-06-02 16:25:23', '2025-06-20 15:38:07'),
 (12, 'teacher005', 'chandra@gmail.com', '$2y$10$84/WmuM2KXJt.2g3ouvXpuviLEIX8YUsJECEfB0Fx9UaET3XqWSxy', 0, 'Chandra', 'Acharya', '9765470926', 'Itahari-9', NULL, 2, 1, '2025-06-13 07:57:51', '2025-06-13 17:09:24'),
 (13, 'principal_john', 'john.principal@school.com', '$2y$10$7X8y9z0w1x2y3z4w5x6y7z8w9x0y1z2w3x4y5z6w7x8y9z0w1x2y3z', 0, 'John', 'Smith', '9841234580', '123 Main St, City', NULL, 1, 1, '2025-06-13 16:49:31', '2025-06-13 16:49:31'),
@@ -1762,7 +1855,9 @@ INSERT INTO `users` (`id`, `username`, `email`, `password_hash`, `password_reset
 (18, 'principal_lisa', 'lisa.principal@school.com', '$2y$10$9z0y1x2w3v4u5t6s7r8q9p0o1n2m3l4k5j6i7h8g9f0e1d2c3b4a5z', 0, 'Lisa', 'Brown', '9841234583', '101 Pine St, City', NULL, 1, 1, '2025-06-13 16:50:36', '2025-06-13 16:50:36'),
 (23, 'prasanga741', 'prasanga741@gmail.com', '$2y$10$eZoflVTmRZ/kkW62XT5FlOUyyVA2g5E43tKMRCCy8v8enan1ErSde', 0, 'Nabin', 'Shrestha', '9841234582', '789 Oak St, City', NULL, 1, 1, '2025-06-13 17:08:12', '2025-06-19 16:03:14'),
 (24, 'bhawana741', 'bhawana741@school.com', '$2y$10$z9NWuOvh1t8valpG4k7u2.7YBUb4h4CwFqCdqz1BP/84.3bBjy/q.', 0, 'Lisa', 'Brown', '9841234583', '101 Pine St, City', NULL, 1, 1, '2025-06-13 17:08:12', '2025-06-13 17:08:12'),
-(25, 'teacher006', 'saroj@gmail.com', '$2y$10$sXmUX7j682OCPOjudretxOITWovsSP8NDRurkO4LnV8lrXWirgjz2', 0, 'Saroj', 'Ojha', '9765470926', 'Itahri', NULL, 2, 1, '2025-06-21 07:33:57', '2025-06-21 07:33:57');
+(25, 'teacher006', 'saroj@gmail.com', '$2y$10$sXmUX7j682OCPOjudretxOITWovsSP8NDRurkO4LnV8lrXWirgjz2', 0, 'Saroj', 'Ojha', '9765470926', 'Itahri', NULL, 2, 1, '2025-06-21 07:33:57', '2025-06-21 07:33:57'),
+(26, 'jasmine.pokharel146', 'jasmine@gmail.com', '$2y$10$6RyEtht9lXfviHVN3EEnbuffyOxWHmepoo4BwPJ0ipG6iMHMGGRiW', 1, 'Jasmine', 'Pokharel', '9765475926', 'ARarr', NULL, 2, 1, '2025-07-24 16:33:58', '2025-07-24 16:53:16'),
+(27, 'hayden.blake457', 'rerehyg@mailinator.com', '$2y$10$R5aeVhIzzR72gyT5hiujzu5PmnUkPMzJOn4HNoZX7qLrv1TATrd0q', 0, 'Hayden', 'Blake', '+1 (783) 797-7089', 'Irure reprehenderit', NULL, 2, 1, '2025-07-24 16:39:09', '2025-07-24 16:39:09');
 
 -- --------------------------------------------------------
 
@@ -1843,7 +1938,8 @@ ALTER TABLE `academic_years`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `unique_current_year` (`is_current`),
   ADD KEY `idx_current` (`is_current`),
-  ADD KEY `idx_dates` (`start_date`,`end_date`);
+  ADD KEY `idx_dates` (`start_date`,`end_date`),
+  ADD KEY `idx_academic_years_current` (`is_current`);
 
 --
 -- Indexes for table `assignments`
@@ -2199,6 +2295,24 @@ ALTER TABLE `student_grades`
   ADD KEY `subject_id` (`subject_id`);
 
 --
+-- Indexes for table `student_graduations`
+--
+ALTER TABLE `student_graduations`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `academic_year_id` (`academic_year_id`),
+  ADD KEY `idx_student_graduations_student` (`student_id`);
+
+--
+-- Indexes for table `student_promotions`
+--
+ALTER TABLE `student_promotions`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `from_class_id` (`from_class_id`),
+  ADD KEY `to_class_id` (`to_class_id`),
+  ADD KEY `idx_student_promotions_student` (`student_id`),
+  ADD KEY `idx_student_promotions_academic_year` (`academic_year_id`);
+
+--
 -- Indexes for table `subjects`
 --
 ALTER TABLE `subjects`
@@ -2215,6 +2329,13 @@ ALTER TABLE `system_logs`
   ADD KEY `idx_user_action` (`user_id`,`action`),
   ADD KEY `idx_table_record` (`table_name`,`record_id`),
   ADD KEY `idx_created_at` (`created_at`);
+
+--
+-- Indexes for table `system_settings`
+--
+ALTER TABLE `system_settings`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `setting_key` (`setting_key`);
 
 --
 -- Indexes for table `teacher_classes`
@@ -2309,7 +2430,7 @@ ALTER TABLE `assignment_submissions`
 -- AUTO_INCREMENT for table `attendance`
 --
 ALTER TABLE `attendance`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=69;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=78;
 
 --
 -- AUTO_INCREMENT for table `classes`
@@ -2321,7 +2442,7 @@ ALTER TABLE `classes`
 -- AUTO_INCREMENT for table `class_subject_teachers`
 --
 ALTER TABLE `class_subject_teachers`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=17;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=21;
 
 --
 -- AUTO_INCREMENT for table `discussion_forums`
@@ -2498,6 +2619,18 @@ ALTER TABLE `student_grades`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
+-- AUTO_INCREMENT for table `student_graduations`
+--
+ALTER TABLE `student_graduations`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `student_promotions`
+--
+ALTER TABLE `student_promotions`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
 -- AUTO_INCREMENT for table `subjects`
 --
 ALTER TABLE `subjects`
@@ -2507,7 +2640,13 @@ ALTER TABLE `subjects`
 -- AUTO_INCREMENT for table `system_logs`
 --
 ALTER TABLE `system_logs`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=94;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=117;
+
+--
+-- AUTO_INCREMENT for table `system_settings`
+--
+ALTER TABLE `system_settings`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
 -- AUTO_INCREMENT for table `teacher_classes`
@@ -2525,19 +2664,19 @@ ALTER TABLE `teacher_logs`
 -- AUTO_INCREMENT for table `teacher_profiles`
 --
 ALTER TABLE `teacher_profiles`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
 -- AUTO_INCREMENT for table `teacher_subjects`
 --
 ALTER TABLE `teacher_subjects`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
 
 --
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=26;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=28;
 
 --
 -- AUTO_INCREMENT for table `user_roles`
@@ -2787,6 +2926,22 @@ ALTER TABLE `student_grades`
   ADD CONSTRAINT `student_grades_ibfk_4` FOREIGN KEY (`academic_year_id`) REFERENCES `academic_years` (`id`),
   ADD CONSTRAINT `student_grades_ibfk_5` FOREIGN KEY (`grade_category_id`) REFERENCES `grade_categories` (`id`),
   ADD CONSTRAINT `student_grades_ibfk_6` FOREIGN KEY (`graded_by`) REFERENCES `users` (`id`);
+
+--
+-- Constraints for table `student_graduations`
+--
+ALTER TABLE `student_graduations`
+  ADD CONSTRAINT `student_graduations_ibfk_1` FOREIGN KEY (`student_id`) REFERENCES `students` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `student_graduations_ibfk_2` FOREIGN KEY (`academic_year_id`) REFERENCES `academic_years` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `student_promotions`
+--
+ALTER TABLE `student_promotions`
+  ADD CONSTRAINT `student_promotions_ibfk_1` FOREIGN KEY (`student_id`) REFERENCES `students` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `student_promotions_ibfk_2` FOREIGN KEY (`from_class_id`) REFERENCES `classes` (`id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `student_promotions_ibfk_3` FOREIGN KEY (`to_class_id`) REFERENCES `classes` (`id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `student_promotions_ibfk_4` FOREIGN KEY (`academic_year_id`) REFERENCES `academic_years` (`id`) ON DELETE CASCADE;
 
 --
 -- Constraints for table `system_logs`

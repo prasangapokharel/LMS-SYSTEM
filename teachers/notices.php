@@ -5,375 +5,255 @@ include_once '../App/Models/teacher/Notice.php';
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Notices Management - LMS</title>
-<link rel="stylesheet" href="../assets/css/ui.css">
-<style>
-    .mobile-container {
-        max-width: 100%;
-        margin: 0 auto;
-        padding: 1rem;
-        background-color: var(--color-gray-50);
-        min-height: 100vh;
-        padding-bottom: 80px;
-    }
-    
-    .stats-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-        gap: 1rem;
-        margin-bottom: 1.5rem;
-    }
-    
-    .stat-card {
-        background: var(--color-white);
-        border-radius: 0.75rem;
-        padding: 1.25rem;
-        text-align: center;
-        box-shadow: var(--shadow-sm);
-        border: 1px solid var(--color-gray-200);
-    }
-    
-    .stat-number {
-        font-size: 1.5rem;
-        font-weight: 600;
-        color: var(--color-primary);
-        margin: 0;
-    }
-    
-    .stat-label {
-        font-size: 0.75rem;
-        color: var(--color-gray-600);
-        margin: 0.25rem 0 0 0;
-    }
-    
-    .create-section {
-        background: var(--color-white);
-        border-radius: 0.75rem;
-        padding: 1.5rem;
-        margin-bottom: 1.5rem;
-        box-shadow: var(--shadow-sm);
-        border: 1px solid var(--color-gray-200);
-    }
-    
-    .notices-grid {
-        display: grid;
-        grid-template-columns: 1fr;
-        gap: 1rem;
-    }
-    
-    .notice-card {
-        background: var(--color-white);
-        border-radius: 0.75rem;
-        padding: 1.25rem;
-        box-shadow: var(--shadow-sm);
-        border: 1px solid var(--color-gray-200);
-        border-left: 4px solid var(--color-primary);
-    }
-    
-    .notice-header {
-        display: flex;
-        align-items: flex-start;
-        gap: 1rem;
-        margin-bottom: 1rem;
-    }
-    
-    .notice-image {
-        width: 80px;
-        height: 80px;
-        border-radius: 0.5rem;
-        object-fit: cover;
-        flex-shrink: 0;
-    }
-    
-    .notice-content {
-        flex: 1;
-        min-width: 0;
-    }
-    
-    .notice-title {
-        font-size: 1rem;
-        font-weight: 600;
-        color: var(--color-gray-900);
-        margin: 0 0 0.5rem 0;
-    }
-    
-    .notice-text {
-        font-size: 0.875rem;
-        color: var(--color-gray-600);
-        margin: 0 0 0.75rem 0;
-        line-height: 1.4;
-    }
-    
-    .notice-meta {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        font-size: 0.75rem;
-        color: var(--color-gray-500);
-    }
-    
-    .form-group {
-        margin-bottom: 1rem;
-    }
-    
-    .form-label {
-        font-size: 0.875rem;
-        font-weight: 500;
-        color: var(--color-gray-700);
-        margin-bottom: 0.5rem;
-        display: block;
-    }
-    
-    .form-input,
-    .form-textarea {
-        width: 100%;
-        padding: 0.75rem;
-        border: 1px solid var(--color-gray-300);
-        border-radius: 0.375rem;
-        font-size: 0.875rem;
-    }
-    
-    .form-textarea {
-        resize: vertical;
-        min-height: 100px;
-    }
-    
-    .upload-area {
-        border: 2px dashed var(--color-gray-300);
-        border-radius: 0.5rem;
-        padding: 2rem;
-        text-align: center;
-        background: var(--color-gray-50);
-        cursor: pointer;
-    }
-    
-    .upload-area.dragover {
-        border-color: var(--color-primary);
-        background: var(--color-primary-light);
-    }
-    
-    .btn {
-        padding: 0.5rem 1rem;
-        border-radius: 0.375rem;
-        font-size: 0.875rem;
-        font-weight: 500;
-        text-decoration: none;
-        border: none;
-        cursor: pointer;
-        display: inline-flex;
-        align-items: center;
-        gap: 0.25rem;
-    }
-    
-    .btn-primary {
-        background: var(--color-primary);
-        color: var(--color-white);
-    }
-    
-    .btn-danger {
-        background: var(--color-danger);
-        color: var(--color-white);
-    }
-    
-    .btn-sm {
-        padding: 0.25rem 0.5rem;
-        font-size: 0.75rem;
-    }
-    
-    .alert {
-        padding: 1rem;
-        border-radius: 0.5rem;
-        margin-bottom: 1rem;
-    }
-    
-    .alert-success {
-        background: var(--color-success-light);
-        color: var(--color-success-dark);
-        border: 1px solid var(--color-success);
-    }
-    
-    .alert-danger {
-        background: var(--color-danger-light);
-        color: var(--color-danger-dark);
-        border: 1px solid var(--color-danger);
-    }
-    
-    @media (min-width: 768px) {
-        .mobile-container {
-            max-width: 1200px;
-            padding: 2rem;
-        }
-        
-        .notices-grid {
-            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-        }
-    }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notices Management - LMS</title>
+    <meta name="description" content="Notices Management - Create and manage school notices">
+    <meta name="theme-color" content="#10b981">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="../assets/css/teacher.css">
+    <link rel="stylesheet" href="../assets/css/teacher/notice.css">
 </head>
 <body>
-<div class="mobile-container">
-    <!-- Page Header -->
-    <div class="page-header">
-        <h1 class="page-title">Notices Management</h1>
-        <p class="page-subtitle">Create and manage school notices</p>
-    </div>
-
-    <!-- Alert Messages -->
-    <?= $msg ?>
-
-    <!-- Statistics -->
-    <div class="stats-grid">
-        <div class="stat-card">
-            <div class="stat-number"><?= $stats['total_notices'] ?></div>
-            <div class="stat-label">Total Notices</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-number"><?= $stats['today_notices'] ?></div>
-            <div class="stat-label">Today's Notices</div>
-        </div>
-    </div>
-
-    <!-- Create Notice Section -->
-    <div class="create-section">
-        <h2 style="margin: 0 0 1rem 0; font-size: 1.125rem; font-weight: 600;">Create New Notice</h2>
-        
-        <form method="post" enctype="multipart/form-data">
-            <input type="hidden" name="action" value="create_notice">
-            
-            <div class="form-group">
-                <label class="form-label">Notice Title *</label>
-                <input type="text" name="title" class="form-input" required placeholder="Enter notice title">
+    <div class="container ">
+        <!-- Header -->
+        <div class="header">
+            <div class="header-content">
+                <h1 class="header-title">Notices Management</h1>
+                <p class="header-subtitle">Create and manage school notices</p>
             </div>
-            
-            <div class="form-group">
-                <label class="form-label">Notice Content *</label>
-                <textarea name="content" class="form-textarea" required placeholder="Enter notice content..."></textarea>
-            </div>
-            
-            <div class="form-group">
-                <label class="form-label">Notice Image (Optional)</label>
-                <div class="upload-area" id="uploadArea">
-                    <input type="file" name="notice_image" id="imageInput" style="display: none;" accept="image/*">
-                    <div>🖼️ Click to select image or drag and drop</div>
-                    <div style="font-size: 0.75rem; color: var(--color-gray-500); margin-top: 0.5rem;">
-                        Supported: JPG, PNG, GIF, WebP (Max: 5MB)
-                    </div>
+        </div>
+
+        <!-- Alert Messages -->
+        <?= $msg ?>
+
+        <!-- Statistics -->
+        <!-- <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0"/>
+                    </svg>
                 </div>
-                <div id="imagePreview" style="margin-top: 0.5rem;"></div>
+                <div class="stat-number"><?= $stats['total_notices'] ?></div>
+                <div class="stat-label">Total Notices</div>
             </div>
             
-            <div style="margin-top: 1.5rem;">
-                <button type="submit" class="btn btn-primary">Create Notice</button>
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"/>
+                        <polyline points="12,6 12,12 16,14"/>
+                    </svg>
+                </div>
+                <div class="stat-number"><?= $stats['today_notices'] ?></div>
+                <div class="stat-label">Today's Notices</div>
             </div>
-        </form>
-    </div>
+        </div> -->
 
-    <!-- Notices List -->
-    <?php if (empty($notices)): ?>
-    <div class="empty-state">
-        <div class="empty-title">No Notices Found</div>
-        <div class="empty-text">Create your first notice to get started.</div>
-    </div>
-    <?php else: ?>
-    <div class="notices-grid">
-        <?php foreach ($notices as $notice): ?>
-        <div class="notice-card">
-            <div class="notice-header">
-                <div class="notice-content">
-                    <h4 class="notice-title"><?= htmlspecialchars($notice['title']) ?></h4>
-                    <p class="notice-text"><?= htmlspecialchars(substr($notice['content'], 0, 150)) ?><?= strlen($notice['content']) > 150 ? '...' : '' ?></p>
-                    <div class="notice-meta">
-                        <span>📅 <?= date('M j, Y g:i A', strtotime($notice['created_at'])) ?></span>
-                        <button type="button" class="btn btn-danger btn-sm" onclick="deleteNotice(<?= $notice['id'] ?>, '<?= addslashes($notice['title']) ?>')">
-                            Delete
-                        </button>
-                    </div>
+        <!-- Create Notice Section -->
+        <div class="card">
+            <div class="card-title">
+                <div class="card-title-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"/>
+                        <line x1="12" y1="8" x2="12" y2="16"/>
+                        <line x1="8" y1="12" x2="16" y2="12"/>
+                    </svg>
+                </div>
+                Create New Notice
+            </div>
+            
+            <form method="post" enctype="multipart/form-data" class="notice-form">
+                <input type="hidden" name="action" value="create_notice">
+                
+                <div class="form-group">
+                    <label class="form-label">Notice Title *</label>
+                    <input type="text" name="title" class="form-input" required placeholder="Enter notice title">
                 </div>
                 
-                <?php if ($notice['notice_image']): ?>
-                    <img src="../<?= htmlspecialchars($notice['notice_image']) ?>" alt="Notice Image" class="notice-image">
-                <?php endif; ?>
+                <div class="form-group">
+                    <label class="form-label">Notice Content *</label>
+                    <textarea name="content" class="form-textarea" required placeholder="Enter notice content..."></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Notice Image (Optional)</label>
+                    <div class="upload-area" id="uploadArea">
+                        <input type="file" name="notice_image" id="imageInput" accept="image/*">
+                        <div class="upload-content">
+                            <div class="upload-icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                                    <circle cx="8.5" cy="8.5" r="1.5"/>
+                                    <polyline points="21,15 16,10 5,21"/>
+                                </svg>
+                            </div>
+                            <div class="upload-text">Click to select image or drag and drop</div>
+                            <div class="upload-hint">Supported: JPG, PNG, GIF, WebP (Max: 5MB)</div>
+                        </div>
+                    </div>
+                    <div id="imagePreview"></div>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10"/>
+                            <line x1="12" y1="8" x2="12" y2="16"/>
+                            <line x1="8" y1="12" x2="16" y2="12"/>
+                        </svg>
+                        Create Notice
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Notices List -->
+        <?php if (empty($notices)): ?>
+        <div class="card">
+            <div class="empty-state">
+                <div class="empty-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0"/>
+                    </svg>
+                </div>
+                <div class="empty-title">No Notices Found</div>
+                <div class="empty-text">Create your first notice to get started.</div>
             </div>
         </div>
-        <?php endforeach; ?>
-    </div>
-    <?php endif; ?>
-</div>
-
-<!-- Include Bottom Navigation -->
-<?php include '../include/bootoomnav.php'; ?>
-
-<script>
-// Image upload handling
-document.addEventListener('DOMContentLoaded', function() {
-    const uploadArea = document.getElementById('uploadArea');
-    const imageInput = document.getElementById('imageInput');
-    const imagePreview = document.getElementById('imagePreview');
-    
-    uploadArea.addEventListener('click', () => imageInput.click());
-    
-    uploadArea.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        uploadArea.classList.add('dragover');
-    });
-    
-    uploadArea.addEventListener('dragleave', () => {
-        uploadArea.classList.remove('dragover');
-    });
-    
-    uploadArea.addEventListener('drop', (e) => {
-        e.preventDefault();
-        uploadArea.classList.remove('dragover');
-        
-        const files = e.dataTransfer.files;
-        if (files.length > 0) {
-            imageInput.files = files;
-            previewImage(files[0]);
-        }
-    });
-    
-    imageInput.addEventListener('change', (e) => {
-        if (e.target.files.length > 0) {
-            previewImage(e.target.files[0]);
-        }
-    });
-    
-    function previewImage(file) {
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            imagePreview.innerHTML = `
-                <img src="${e.target.result}" style="max-width: 200px; max-height: 150px; border-radius: 0.5rem; object-fit: cover;">
-                <div style="font-size: 0.875rem; color: var(--color-gray-700); margin-top: 0.5rem;">
-                    Selected: ${file.name} (${formatFileSize(file.size)})
+        <?php else: ?>
+        <div class="card">
+            <div class="card-title">
+                <div class="card-title-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0"/>
+                    </svg>
                 </div>
-            `;
-        };
-        reader.readAsDataURL(file);
-    }
-    
-    function formatFileSize(bytes) {
-        if (bytes === 0) return '0 Bytes';
-        const k = 1024;
-        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-        const i = Math.floor(Math.log(bytes) / Math.log(k));
-        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-    }
-});
+                Recent Notices
+            </div>
+            
+            <div class="notices-list">
+                <?php foreach ($notices as $notice): ?>
+                <div class="notice-item">
+                    <div class="notice-content">
+                        <?php if ($notice['notice_image']): ?>
+                            <div class="notice-image">
+                                <img src="../<?= htmlspecialchars($notice['notice_image']) ?>" alt="Notice Image">
+                            </div>
+                        <?php endif; ?>
+                        
+                        <div class="notice-details">
+                            <h4 class="notice-title"><?= htmlspecialchars($notice['title']) ?></h4>
+                            <p class="notice-text"><?= htmlspecialchars(substr($notice['content'], 0, 150)) ?><?= strlen($notice['content']) > 150 ? '...' : '' ?></p>
+                            
+                            <div class="notice-meta">
+                                <div class="notice-date">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                                        <line x1="16" y1="2" x2="16" y2="6"/>
+                                        <line x1="8" y1="2" x2="8" y2="6"/>
+                                        <line x1="3" y1="10" x2="21" y2="10"/>
+                                    </svg>
+                                    <?= date('M j, Y g:i A', strtotime($notice['created_at'])) ?>
+                                </div>
+                                
+                                <button type="button" class="btn btn-danger btn-small" onclick="deleteNotice(<?= $notice['id'] ?>, '<?= addslashes($notice['title']) ?>')">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <polyline points="3,6 5,6 21,6"/>
+                                        <path d="M19,6v14a2,2 0 0,1 -2,2H7a2,2 0 0,1 -2,-2V6m3,0V4a2,2 0 0,1 2,-2h4a2,2 0 0,1 2,2v2"/>
+                                        <line x1="10" y1="11" x2="10" y2="17"/>
+                                        <line x1="14" y1="11" x2="14" y2="17"/>
+                                    </svg>
+                                    Delete
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <?php endforeach; ?>
+            </div>
+        </div>
+        <?php endif; ?>
+    </div>
 
-function deleteNotice(noticeId, noticeTitle) {
-    if (confirm(`Are you sure you want to delete "${noticeTitle}"?`)) {
-        const form = document.createElement('form');
-        form.method = 'POST';
-        form.innerHTML = `
-            <input type="hidden" name="action" value="delete_notice">
-            <input type="hidden" name="notice_id" value="${noticeId}">
-        `;
-        document.body.appendChild(form);
-        form.submit();
-    }
-}
-</script>
+    <!-- Include Bottom Navigation -->
+    <?php include '../include/bootoomnav.php'; ?>
+
+    <script>
+        // Image upload handling
+        document.addEventListener('DOMContentLoaded', function() {
+            const uploadArea = document.getElementById('uploadArea');
+            const imageInput = document.getElementById('imageInput');
+            const imagePreview = document.getElementById('imagePreview');
+            
+            uploadArea.addEventListener('click', () => imageInput.click());
+            
+            uploadArea.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                uploadArea.classList.add('dragover');
+            });
+            
+            uploadArea.addEventListener('dragleave', () => {
+                uploadArea.classList.remove('dragover');
+            });
+            
+            uploadArea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                uploadArea.classList.remove('dragover');
+                
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    imageInput.files = files;
+                    previewImage(files[0]);
+                }
+            });
+            
+            imageInput.addEventListener('change', (e) => {
+                if (e.target.files.length > 0) {
+                    previewImage(e.target.files[0]);
+                }
+            });
+            
+            function previewImage(file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    imagePreview.innerHTML = `
+                        <div class="image-preview">
+                            <img src="${e.target.result}" alt="Preview">
+                            <div class="preview-info">
+                                <span class="preview-name">${file.name}</span>
+                                <span class="preview-size">(${formatFileSize(file.size)})</span>
+                            </div>
+                        </div>
+                    `;
+                };
+                reader.readAsDataURL(file);
+            }
+            
+            function formatFileSize(bytes) {
+                if (bytes === 0) return '0 Bytes';
+                const k = 1024;
+                const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+                const i = Math.floor(Math.log(bytes) / Math.log(k));
+                return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+            }
+        });
+
+        function deleteNotice(noticeId, noticeTitle) {
+            if (confirm(`Are you sure you want to delete "${noticeTitle}"?`)) {
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.innerHTML = `
+                    <input type="hidden" name="action" value="delete_notice">
+                    <input type="hidden" name="notice_id" value="${noticeId}">
+                `;
+                document.body.appendChild(form);
+                form.submit();
+            }
+        }
+    </script>
 </body>
 </html>

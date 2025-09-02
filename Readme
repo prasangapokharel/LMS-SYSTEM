@@ -9,3 +9,10 @@ reset8796
 composer install 
 
 php start.php 
+
+
+"subject" : "mailto: <prasangaramanpokharel@gmail.com>",
+"publicKey" : "BOTTp9eT7CXYpFjZ4WhJpkdENtK8ll9TJsMD5byw378y7ggK-I6b3l-jxyxwgFotTTViDPwyymh1X1r2uv8MBqY",
+"privateKey" : "HEolDUcHxTNrVEAbEpqot_2OssHC05X7dlUtHGl5-ks"
+}
+vapid fro notfiication

@@ -611,7 +611,7 @@ include_once '../App/Models/teacher/Gradebook.php';
     </style>
 </head>
 <body>
-    <div class="gradebook-app">
+    <div class="gradebook-app fixed">
         <div class="gradebook-header">
             <div class="header-content">
                 <div class="header-top">

@@ -1,9 +1,8 @@
 <?php
-
 class HeadOfficeUser {
     private $pdo;
     private $cache;
-    
+
     public function __construct($pdo) {
         $this->pdo = $pdo;
         // Initialize cache if available
@@ -11,7 +10,129 @@ class HeadOfficeUser {
             $this->cache = new \Symfony\Component\Cache\Adapter\FilesystemAdapter('user_management', 3600, __DIR__ . '/../../cache');
         }
     }
-    
+
+    /**
+     * Get users with filters and pagination
+     */
+    public function getUsers($filters = [], $page = 1, $per_page = 20) {
+        $where_conditions = [];
+        $params = [];
+        
+        // Role filter
+        if (!empty($filters['role']) && $filters['role'] !== 'all') {
+            $where_conditions[] = "ur.role_name = ?";
+            $params[] = $filters['role'];
+        }
+        
+        // Status filter
+        if (!empty($filters['status']) && $filters['status'] !== 'all') {
+            $where_conditions[] = "u.is_active = ?";
+            $params[] = ($filters['status'] === 'active') ? 1 : 0;
+        }
+        
+        // Search filter
+        if (!empty($filters['search'])) {
+            $where_conditions[] = "(u.first_name LIKE ? OR u.last_name LIKE ? OR u.email LIKE ? OR u.username LIKE ? OR s.student_id LIKE ?)";
+            $search_param = "%{$filters['search']}%";
+            $params = array_merge($params, [$search_param, $search_param, $search_param, $search_param, $search_param]);
+        }
+        
+        $where_clause = !empty($where_conditions) ? 'WHERE ' . implode(' AND ', $where_conditions) : '';
+        
+        // Get total count
+        $count_query = "SELECT COUNT(DISTINCT u.id) as total 
+                        FROM users u 
+                        JOIN user_roles ur ON u.role_id = ur.id 
+                        LEFT JOIN students s ON u.id = s.user_id 
+                        LEFT JOIN student_classes sc ON s.id = sc.student_id 
+                        LEFT JOIN classes c ON sc.class_id = c.id 
+                        $where_clause";
+        
+        $count_stmt = $this->pdo->prepare($count_query);
+        $count_stmt->execute($params);
+        $total_users = $count_stmt->fetch(\PDO::FETCH_ASSOC)['total'];
+        
+        // Calculate pagination
+        $offset = ($page - 1) * $per_page;
+        $total_pages = ceil($total_users / $per_page);
+        
+        // Fetch users with pagination - FIXED: Use integers for LIMIT and OFFSET
+        $query = "SELECT DISTINCT
+                    u.id,
+                    u.username,
+                    u.email,
+                    u.first_name,
+                    u.last_name,
+                    u.phone,
+                    u.address,
+                    u.is_active,
+                    u.created_at,
+                    ur.role_name,
+                    s.student_id,
+                    c.class_name,
+                    c.section,
+                    s.date_of_birth,
+                    s.guardian_name,
+                    s.guardian_phone,
+                    s.guardian_email,
+                    s.blood_group
+                  FROM users u
+                  JOIN user_roles ur ON u.role_id = ur.id
+                  LEFT JOIN students s ON u.id = s.user_id
+                  LEFT JOIN student_classes sc ON s.id = sc.student_id AND sc.status = 'enrolled'
+                  LEFT JOIN classes c ON sc.class_id = c.id
+                  $where_clause
+                  ORDER BY u.created_at DESC, u.last_name ASC, u.first_name ASC
+                  LIMIT $per_page OFFSET $offset";
+        
+        $stmt = $this->pdo->prepare($query);
+        $stmt->execute($params);
+        $users = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+        
+        return [
+            'users' => $users,
+            'total_users' => $total_users,
+            'total_pages' => $total_pages,
+            'current_page' => $page,
+            'per_page' => $per_page
+        ];
+    }
+
+    /**
+     * Get user by ID with full details
+     */
+    public function getUserById($user_id) {
+        $query = "SELECT 
+                    u.id,
+                    u.username,
+                    u.email,
+                    u.first_name,
+                    u.last_name,
+                    u.phone,
+                    u.address,
+                    u.is_active,
+                    u.created_at,
+                    ur.role_name,
+                    s.student_id,
+                    s.date_of_birth,
+                    s.guardian_name,
+                    s.guardian_phone,
+                    s.guardian_email,
+                    s.blood_group,
+                    c.class_name,
+                    c.section
+                  FROM users u
+                  JOIN user_roles ur ON u.role_id = ur.id
+                  LEFT JOIN students s ON u.id = s.user_id
+                  LEFT JOIN student_classes sc ON s.id = sc.student_id AND sc.status = 'enrolled'
+                  LEFT JOIN classes c ON sc.class_id = c.id
+                  WHERE u.id = ?";
+        
+        $stmt = $this->pdo->prepare($query);
+        $stmt->execute([$user_id]);
+        return $stmt->fetch(\PDO::FETCH_ASSOC);
+    }
+
     /**
      * Create a new teacher with optional subject assignments
      */
@@ -31,7 +152,7 @@ class HeadOfficeUser {
         try {
             $this->pdo->beginTransaction();
             
-            // Create user account
+            // Create user account - FIXED: Use password_hash instead of password
             $stmt = $this->pdo->prepare("INSERT INTO users 
                                       (username, email, password_hash, first_name, last_name, phone, address, role_id, is_active, created_at) 
                                       VALUES (?, ?, ?, ?, ?, ?, ?, 2, 1, NOW())");
@@ -97,12 +218,12 @@ class HeadOfficeUser {
                 'user_id' => $user_id
             ];
             
-        } catch (PDOException $e) {
+        } catch (\PDOException $e) {
             $this->pdo->rollBack();
             return ['success' => false, 'message' => 'Database error: ' . $e->getMessage()];
         }
     }
-    
+
     /**
      * Create a new student with class enrollment
      */
@@ -126,7 +247,7 @@ class HeadOfficeUser {
         try {
             $this->pdo->beginTransaction();
             
-            // Create user account
+            // Create user account - FIXED: Use password_hash instead of password
             $stmt = $this->pdo->prepare("INSERT INTO users 
                                       (username, email, password_hash, first_name, last_name, phone, address, role_id, is_active, created_at) 
                                       VALUES (?, ?, ?, ?, ?, ?, ?, 3, 1, NOW())");
@@ -142,11 +263,11 @@ class HeadOfficeUser {
             
             $user_id = $this->pdo->lastInsertId();
             
-            // Create student record
+            // Create student record - FIXED: Use correct column names from database schema
             $stmt = $this->pdo->prepare("INSERT INTO students 
-                                      (user_id, student_id, admission_date, date_of_birth, blood_group, 
-                                       guardian_name, guardian_phone, guardian_email, status) 
-                                      VALUES (?, ?, CURDATE(), ?, ?, ?, ?, ?, 'active')");
+                                      (user_id, student_id, admission_date, date_of_birth, blood_group,
+                                       guardian_name, guardian_phone, guardian_email, is_active) 
+                                      VALUES (?, ?, CURDATE(), ?, ?, ?, ?, ?, 1)");
             $stmt->execute([
                 $user_id,
                 $student_id,
@@ -194,12 +315,12 @@ class HeadOfficeUser {
                 'user_id' => $user_id
             ];
             
-        } catch (PDOException $e) {
+        } catch (\PDOException $e) {
             $this->pdo->rollBack();
             return ['success' => false, 'message' => 'Database error: ' . $e->getMessage()];
         }
     }
-    
+
     /**
      * Assign subjects to a teacher
      */
@@ -209,7 +330,7 @@ class HeadOfficeUser {
             $stmt->execute([$teacher_profile_id, $subject_id]);
         }
     }
-    
+
     /**
      * Assign classes to a teacher - FIXED: Store in both tables
      */
@@ -217,8 +338,8 @@ class HeadOfficeUser {
         foreach ($classes as $class_data) {
             // Store in teacher_classes table
             $stmt = $this->pdo->prepare("INSERT IGNORE INTO teacher_classes 
-                                       (teacher_id, class_id, subject_id, academic_year_id, assigned_date) 
-                                       VALUES (?, ?, ?, ?, NOW())");
+                                        (teacher_id, class_id, subject_id, academic_year_id, assigned_date) 
+                                        VALUES (?, ?, ?, ?, NOW())");
             $stmt->execute([
                 $teacher_profile_id,
                 $class_data['class_id'],
@@ -228,8 +349,8 @@ class HeadOfficeUser {
             
             // ALSO store in class_subject_teachers table for compatibility
             $stmt = $this->pdo->prepare("INSERT IGNORE INTO class_subject_teachers 
-                                       (class_id, subject_id, teacher_id, academic_year_id, assigned_date) 
-                                       VALUES (?, ?, ?, ?, NOW())");
+                                        (class_id, subject_id, teacher_id, academic_year_id, assigned_date) 
+                                        VALUES (?, ?, ?, ?, NOW())");
             $stmt->execute([
                 $class_data['class_id'],
                 $class_data['subject_id'],
@@ -238,7 +359,7 @@ class HeadOfficeUser {
             ]);
         }
     }
-    
+
     /**
      * Get teacher's assigned classes
      */
@@ -259,9 +380,9 @@ class HeadOfficeUser {
             ORDER BY c.class_level, c.section, s.subject_name
         ");
         $stmt->execute([$user_id]);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        return $stmt->fetchAll(\PDO::FETCH_ASSOC);
     }
-    
+
     /**
      * Validate teacher data
      */
@@ -287,7 +408,7 @@ class HeadOfficeUser {
         
         return ['valid' => true];
     }
-    
+
     /**
      * Validate student data
      */
@@ -324,8 +445,8 @@ class HeadOfficeUser {
         }
         
         // Validate age
-        $birthDate = new DateTime($data['date_of_birth']);
-        $today = new DateTime();
+        $birthDate = new \DateTime($data['date_of_birth']);
+        $today = new \DateTime();
         $age = $today->diff($birthDate)->y;
         
         if ($age < 3 || $age > 25) {
@@ -334,7 +455,7 @@ class HeadOfficeUser {
         
         return ['valid' => true];
     }
-    
+
     /**
      * Generate strong password
      */
@@ -346,23 +467,23 @@ class HeadOfficeUser {
         }
         return $password;
     }
-    
+
     /**
      * Get all subjects for teacher assignment
      */
     public function getAllSubjects() {
         $stmt = $this->pdo->query("SELECT id, subject_name, subject_code FROM subjects WHERE is_active = 1 ORDER BY subject_name");
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        return $stmt->fetchAll(\PDO::FETCH_ASSOC);
     }
-    
+
     /**
      * Get all classes for assignment
      */
     public function getAllClasses() {
         $stmt = $this->pdo->query("SELECT id, class_name, section, class_level FROM classes WHERE is_active = 1 ORDER BY class_level, section");
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        return $stmt->fetchAll(\PDO::FETCH_ASSOC);
     }
-    
+
     /**
      * Reset user password
      */
@@ -381,11 +502,11 @@ class HeadOfficeUser {
                 'message' => 'Password reset successfully!',
                 'new_password' => $new_password
             ];
-        } catch (PDOException $e) {
+        } catch (\PDOException $e) {
             return ['success' => false, 'message' => 'Error resetting password: ' . $e->getMessage()];
         }
     }
-    
+
     /**
      * Toggle user status
      */
@@ -402,11 +523,11 @@ class HeadOfficeUser {
                 'success' => true,
                 'message' => "User has been {$status_text} successfully!"
             ];
-        } catch (PDOException $e) {
+        } catch (\PDOException $e) {
             return ['success' => false, 'message' => 'Error updating user status: ' . $e->getMessage()];
         }
     }
-    
+
     /**
      * Get user statistics
      */
@@ -433,7 +554,7 @@ class HeadOfficeUser {
         
         return $stats;
     }
-    
+
     /**
      * Clear user-related caches
      */
@@ -442,7 +563,7 @@ class HeadOfficeUser {
             $this->cache->deleteItems(['user_stats', 'user_list_all', 'class_list', 'subject_list']);
         }
     }
-    
+
     /**
      * Log activity
      */

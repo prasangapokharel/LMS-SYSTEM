@@ -499,8 +499,8 @@ if ($current_role == 'teacher') {
         }
     </style>
 </head>
-<body>
-    <div class="header">
+<body class="fixed">
+    <div class="header ">
         <div class="header-content">
             <div class="header-left">
                 <a href="index.php" class="back-btn">
@@ -511,13 +511,7 @@ if ($current_role == 'teacher') {
                 </a>
                 <h1 class="menu-title">Menu</h1>
             </div>
-            <div class="header-right">
-                <div class="user-info">
-                    <div class="user-name"><?= htmlspecialchars(trim($user_full_name)) ?: $user_name ?></div>
-                    <div class="user-role"><?= htmlspecialchars($current_role) ?></div>
-                </div>
-                <img src="../assets/images/<?= htmlspecialchars($user_avatar) ?>" alt="Profile" class="user-avatar" onerror="this.src='../assets/images/default-avatar.png'">
-            </div>
+
         </div>
     </div>
 

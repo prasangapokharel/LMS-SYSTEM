@@ -1,0 +1,8 @@
+2025-07-24 21:43:04 - Failed to import student from row 2 - Data: {"error":"SQLSTATE[42S22]: Column not found: 1054 Unknown column 'password' in 'field list'","data":["John","Doe","john.doe@example.com","1234567890","2010-05-15","Jane Doe","0987654321","Class 1 A","123 Main St","O+","jane.doe@example.com"]}
+2025-07-24 21:44:37 - User creation/import failed - Data: {"error":"Email address already exists.","user_id":24}
+2025-07-24 21:45:24 - User creation/import failed - Data: {"error":"SQLSTATE[42S22]: Column not found: 1054 Unknown column 'password' in 'field list'","user_id":24}
+2025-07-24 21:46:11 - Failed to import student from row 2 - Data: {"error":"SQLSTATE[42S22]: Column not found: 1054 Unknown column 'password' in 'field list'","data":["John","Doe","john.doe@example.com","1234567890","2010-05-15","Jane Doe","0987654321","Class 1 A","123 Main St","O+","jane.doe@example.com"]}
+2025-07-24 21:53:13 - User creation/import failed - Data: {"error":"SQLSTATE[42S22]: Column not found: 1054 Unknown column 'password' in 'field list'","user_id":24}
+2025-07-24 21:54:25 - User creation/import failed - Data: {"error":"SQLSTATE[42S22]: Column not found: 1054 Unknown column 'password' in 'field list'","user_id":24}
+2025-07-24 22:03:58 - Teacher created successfully - Data: {"teacher_name":"Jasmine Pokharel","email":"jasmine@gmail.com","username":"jasmine.pokharel146","created_by":24}
+2025-07-24 22:09:09 - Teacher created successfully - Data: {"teacher_name":"Hayden Blake","email":"rerehyg@mailinator.com","username":"hayden.blake457","created_by":24}

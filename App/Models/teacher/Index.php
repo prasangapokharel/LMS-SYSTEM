@@ -77,4 +77,6 @@ $stmt = $pdo->prepare("SELECT la.*, u.first_name, u.last_name, s.student_id
                       LIMIT 5");
 $stmt->execute([$user['id']]);
 $pending_leaves = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+
 ?>

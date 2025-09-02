@@ -1,650 +1,740 @@
 <?php
 include_once '../App/Models/teacher/Event.php';
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Events Management - LMS</title>
-<link rel="stylesheet" href="../assets/css/ui.css">
-<style>
-    .mobile-container {
-        max-width: 100%;
-        margin: 0 auto;
-        padding: 1rem;
-        background-color: var(--color-gray-50);
-        min-height: 100vh;
-        padding-bottom: 80px;
-    }
-    
-    .stats-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-        gap: 1rem;
-        margin-bottom: 1.5rem;
-    }
-    
-    .stat-card {
-        background: var(--color-white);
-        border-radius: 0.75rem;
-        padding: 1.25rem;
-        text-align: center;
-        box-shadow: var(--shadow-sm);
-        border: 1px solid var(--color-gray-200);
-    }
-    
-    .stat-number {
-        font-size: 1.5rem;
-        font-weight: 600;
-        color: var(--color-primary);
-        margin: 0;
-    }
-    
-    .stat-label {
-        font-size: 0.75rem;
-        color: var(--color-gray-600);
-        margin: 0.25rem 0 0 0;
-    }
-    
-    .create-section {
-        background: var(--color-white);
-        border-radius: 0.75rem;
-        padding: 1.5rem;
-        margin-bottom: 1.5rem;
-        box-shadow: var(--shadow-sm);
-        border: 1px solid var(--color-gray-200);
-    }
-    
-    .events-grid {
-        display: grid;
-        grid-template-columns: 1fr;
-        gap: 1rem;
-    }
-    
-    .event-card {
-        background: var(--color-white);
-        border-radius: 0.75rem;
-        padding: 1.25rem;
-        box-shadow: var(--shadow-sm);
-        border: 1px solid var(--color-gray-200);
-        border-left: 4px solid var(--color-primary);
-    }
-    
-    .event-header {
-        display: flex;
-        align-items: flex-start;
-        gap: 1rem;
-        margin-bottom: 1rem;
-    }
-    
-    .event-image {
-        width: 80px;
-        height: 80px;
-        border-radius: 0.5rem;
-        object-fit: cover;
-        flex-shrink: 0;
-    }
-    
-    .event-icon {
-        width: 48px;
-        height: 48px;
-        border-radius: 0.5rem;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 1.5rem;
-        flex-shrink: 0;
-        background: var(--color-primary-light);
-        color: var(--color-primary);
-    }
-    
-    .event-content {
-        flex: 1;
-        min-width: 0;
-    }
-    
-    .event-title {
-        font-size: 1rem;
-        font-weight: 600;
-        color: var(--color-gray-900);
-        margin: 0 0 0.25rem 0;
-    }
-    
-    .event-description {
-        font-size: 0.875rem;
-        color: var(--color-gray-600);
-        margin: 0 0 0.75rem 0;
-        line-height: 1.4;
-    }
-    
-    .event-meta {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.75rem;
-        font-size: 0.75rem;
-        color: var(--color-gray-500);
-        margin-bottom: 0.75rem;
-    }
-    
-    .event-actions {
-        display: flex;
-        gap: 0.5rem;
-        flex-wrap: wrap;
-    }
-    
-    .form-row {
-        display: flex;
-        flex-direction: column;
-        gap: 1rem;
-        margin-bottom: 1rem;
-    }
-    
-    .form-group {
-        display: flex;
-        flex-direction: column;
-    }
-    
-    .form-label {
-        font-size: 0.875rem;
-        font-weight: 500;
-        color: var(--color-gray-700);
-        margin-bottom: 0.5rem;
-    }
-    
-    .form-input,
-    .form-select,
-    .form-textarea {
-        padding: 0.75rem;
-        border: 1px solid var(--color-gray-300);
-        border-radius: 0.375rem;
-        font-size: 0.875rem;
-    }
-    
-    .form-textarea {
-        resize: vertical;
-        min-height: 80px;
-    }
-    
-    .form-checkbox {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        margin-top: 0.5rem;
-    }
-    
-    .upload-area {
-        border: 2px dashed var(--color-gray-300);
-        border-radius: 0.5rem;
-        padding: 2rem;
-        text-align: center;
-        background: var(--color-gray-50);
-        margin-bottom: 1rem;
-        cursor: pointer;
-    }
-    
-    .upload-area.dragover {
-        border-color: var(--color-primary);
-        background: var(--color-primary-light);
-    }
-    
-    .btn {
-        padding: 0.5rem 1rem;
-        border-radius: 0.375rem;
-        font-size: 0.75rem;
-        font-weight: 500;
-        text-decoration: none;
-        border: none;
-        cursor: pointer;
-        display: inline-flex;
-        align-items: center;
-        gap: 0.25rem;
-    }
-    
-    .btn-primary {
-        background: var(--color-primary);
-        color: var(--color-white);
-    }
-    
-    .btn-danger {
-        background: var(--color-danger);
-        color: var(--color-white);
-    }
-    
-    .btn-sm {
-        padding: 0.25rem 0.5rem;
-        font-size: 0.625rem;
-    }
-    
-    .alert {
-        padding: 1rem;
-        border-radius: 0.5rem;
-        margin-bottom: 1rem;
-    }
-    
-    .alert-success {
-        background: var(--color-success-light);
-        color: var(--color-success-dark);
-        border: 1px solid var(--color-success);
-    }
-    
-    .alert-danger {
-        background: var(--color-danger-light);
-        color: var(--color-danger-dark);
-        border: 1px solid var(--color-danger);
-    }
-    
-    .modal {
-        display: none;
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0, 0, 0, 0.5);
-        z-index: 1000;
-    }
-    
-    .modal.show {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-    
-    .modal-content {
-        background: white;
-        border-radius: 0.75rem;
-        max-width: 500px;
-        width: 90%;
-        max-height: 90vh;
-        overflow-y: auto;
-    }
-    
-    .modal-header {
-        padding: 1.5rem 1.5rem 0;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-    
-    .modal-title {
-        font-size: 1.25rem;
-        font-weight: 600;
-        margin: 0;
-    }
-    
-    .modal-close {
-        background: none;
-        border: none;
-        font-size: 1.5rem;
-        cursor: pointer;
-        color: var(--color-gray-500);
-    }
-    
-    .modal-body {
-        padding: 1.5rem;
-    }
-    
-    @media (min-width: 768px) {
-        .mobile-container {
-            max-width: 1200px;
-            padding: 2rem;
-        }
-        
-        .form-row {
-            flex-direction: row;
-        }
-        
-        .form-group {
-            flex: 1;
-        }
-        
-        .events-grid {
-            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-        }
-    }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Events - LMS</title>
+    <meta name="description" content="Create and manage school events">
+    <meta name="theme-color" content="#10b981">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="../assets/css/teacher.css">
+    <link rel="stylesheet" href="../assets/css/teacher/events.css">
+        <link rel="stylesheet" href="../assets/css/teacher/calendar.css">
+
 </head>
 <body>
-<div class="mobile-container">
-    <!-- Page Header -->
-    <div class="page-header">
-        <h1 class="page-title">Events Management</h1>
-        <p class="page-subtitle">Create and manage school events</p>
-    </div>
+    <div class="container ">
+        <!-- Header -->
+        <div class="header">
+            <div class="header-content">
+                <h1 class="header-title">📅 Events Management</h1>
+                <p class="header-subtitle">Create and manage school events</p>
+                <div class="header-actions">
+                    <button class="header-btn" onclick="toggleCreateForm()">
+                        ➕ Create Event
+                    </button>
+                    <button class="header-btn" onclick="showCalendarView()">
+                        📊 Calendar View
+                    </button>
+                </div>
+            </div>
+        </div>
 
-    <!-- Alert Messages -->
-    <?= $msg ?>
+        <!-- Alert Messages -->
+        <?php if ($msg): ?>
+        <div id="messageContainer">
+            <?= $msg ?>
+        </div>
+        <?php endif; ?>
 
-    <!-- Statistics -->
-    <div class="stats-grid">
-        <div class="stat-card">
-            <div class="stat-number"><?= $stats['total_events'] ?></div>
-            <div class="stat-label">Total Events</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-number"><?= $stats['upcoming_events'] ?></div>
-            <div class="stat-label">Upcoming</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-number"><?= $stats['exams'] ?></div>
-            <div class="stat-label">Exams</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-number"><?= $stats['meetings'] ?></div>
-            <div class="stat-label">Meetings</div>
-        </div>
-    </div>
+        <!-- Statistics Grid -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon total">📅</div>
+                <div class="stat-content">
+                    <div class="stat-number"><?= $stats['total_events'] ?></div>
+                    <div class="stat-label">Total Events</div>
+                </div>
+            </div>
 
-    <!-- Create Event Section -->
-    <div class="create-section">
-        <h2 style="margin: 0 0 1rem 0; font-size: 1.125rem; font-weight: 600;">Create New Event</h2>
-        
-        <form method="post" enctype="multipart/form-data">
-            <input type="hidden" name="action" value="create_event">
-            
-            <div class="form-row">
-                <div class="form-group">
-                    <label class="form-label">Event Title *</label>
-                    <input type="text" name="title" class="form-input" required>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Event Type *</label>
-                    <select name="event_type" class="form-select" required>
-                        <option value="">Select Type</option>
-                        <option value="class">Class</option>
-                        <option value="exam">Exam</option>
-                        <option value="assignment">Assignment</option>
-                        <option value="holiday">Holiday</option>
-                        <option value="meeting">Meeting</option>
-                        <option value="announcement">Announcement</option>
-                        <option value="other">Other</option>
-                    </select>
+            <div class="stat-card">
+                <div class="stat-icon upcoming">⏰</div>
+                <div class="stat-content">
+                    <div class="stat-number"><?= $stats['upcoming_events'] ?></div>
+                    <div class="stat-label">Upcoming</div>
                 </div>
             </div>
-            
-            <div class="form-group">
-                <label class="form-label">Description</label>
-                <textarea name="description" class="form-textarea" placeholder="Describe the event details..."></textarea>
-            </div>
-            
-            <div class="form-row">
-                <div class="form-group">
-                    <label class="form-label">Start Date *</label>
-                    <input type="date" name="start_date" class="form-input" required>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">End Date</label>
-                    <input type="date" name="end_date" class="form-input">
+
+            <div class="stat-card">
+                <div class="stat-icon exams">📝</div>
+                <div class="stat-content">
+                    <div class="stat-number"><?= $stats['exams'] ?></div>
+                    <div class="stat-label">Exams</div>
                 </div>
             </div>
-            
-            <div class="form-row">
-                <div class="form-group">
-                    <label class="form-label">Start Time</label>
-                    <input type="time" name="start_time" class="form-input">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">End Time</label>
-                    <input type="time" name="end_time" class="form-input">
+
+            <div class="stat-card">
+                <div class="stat-icon meetings">👥</div>
+                <div class="stat-content">
+                    <div class="stat-number"><?= $stats['meetings'] ?></div>
+                    <div class="stat-label">Meetings</div>
                 </div>
             </div>
-            
-            <div class="form-row">
-                <div class="form-group">
-                    <label class="form-label">Location</label>
-                    <input type="text" name="location" class="form-input" placeholder="Event location">
+        </div>
+
+        <!-- Calendar View Toggle -->
+        <div class="view-toggle">
+            <button class="toggle-btn active" id="listViewBtn" onclick="switchView('list')">
+                📋 List View
+            </button>
+            <button class="toggle-btn" id="calendarViewBtn" onclick="switchView('calendar')">
+                📅 Calendar View
+            </button>
+        </div>
+
+        <!-- Calendar Controls -->
+        <div class="calendar-controls" id="calendarControls" style="display: none;">
+            <div class="calendar-nav">
+                <button class="nav-btn" onclick="previousPeriod()">‹</button>
+                <div class="period-selector">
+                    <button class="period-btn active" id="monthBtn" onclick="switchPeriod('month')">Month</button>
+                    <button class="period-btn" id="weekBtn" onclick="switchPeriod('week')">Week</button>
                 </div>
-                <div class="form-group">
-                    <label class="form-label">Color</label>
-                    <input type="color" name="color" class="form-input" value="#3498db">
+                <button class="nav-btn" onclick="nextPeriod()">›</button>
+            </div>
+            <div class="current-period" id="currentPeriod">
+                <?= date('F Y') ?>
+            </div>
+            <button class="today-btn" onclick="goToToday()">📅 Today</button>
+        </div>
+
+        <!-- Calendar View -->
+        <div class="calendar-container" id="calendarContainer" style="display: none;">
+            <div class="calendar-grid" id="calendarGrid">
+                <!-- Calendar will be generated by JavaScript -->
+            </div>
+        </div>
+
+        <!-- Create Event Form -->
+        <div class="card create-form-card collapsed" id="createForm">
+            <div class="form-toggle-header" onclick="toggleCreateForm()">
+                <div class="form-toggle-title">
+                    <div class="form-toggle-icon">➕</div>
+                    <h2 class="toggle-title-text">Create New Event</h2>
                 </div>
+                <div class="form-chevron">▼</div>
             </div>
             
-            <div class="form-row">
-                <div class="form-group">
-                    <label class="form-label">Class (Optional)</label>
-                    <select name="class_id" class="form-select">
-                        <option value="">All Classes</option>
-                        <?php 
-                        $unique_classes = [];
-                        foreach ($teacher_courses as $course): 
-                            $class_key = $course['class_id'];
-                            if (!isset($unique_classes[$class_key])):
-                                $unique_classes[$class_key] = true;
-                        ?>
-                        <option value="<?= $course['class_id'] ?>">
-                            <?= htmlspecialchars($course['class_name'] . ' ' . $course['section']) ?>
-                        </option>
-                        <?php 
-                            endif;
-                        endforeach; 
-                        ?>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Subject (Optional)</label>
-                    <select name="subject_id" class="form-select">
-                        <option value="">All Subjects</option>
-                        <?php 
-                        $unique_subjects = [];
-                        foreach ($teacher_courses as $course): 
-                            if (!$course['subject_id']) continue;
-                            $subject_key = $course['subject_id'];
-                            if (!isset($unique_subjects[$subject_key])):
-                                $unique_subjects[$subject_key] = true;
-                        ?>
-                        <option value="<?= $course['subject_id'] ?>">
-                            <?= htmlspecialchars($course['subject_name']) ?>
-                        </option>
-                        <?php 
-                            endif;
-                        endforeach; 
-                        ?>
-                    </select>
-                </div>
-            </div>
-            
-            <div class="form-group">
-                <label class="form-label">Event Image</label>
-                <div class="upload-area" id="uploadArea">
-                    <input type="file" name="event_image" id="imageInput" style="display: none;" accept="image/*">
-                    <div>🖼️ Click to select image or drag and drop</div>
-                    <div style="font-size: 0.75rem; color: var(--color-gray-500); margin-top: 0.5rem;">
-                        Supported: JPG, PNG, GIF, WebP (Max: 5MB)
+            <div class="form-toggle-body">
+                <form method="post" enctype="multipart/form-data">
+                    <input type="hidden" name="action" value="create_event">
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">📝 Event Title *</label>
+                            <input type="text" name="title" class="form-input" required placeholder="Enter event title">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">🏷️ Event Type *</label>
+                            <select name="event_type" class="form-select" required>
+                                <option value="">Select Type</option>
+                                <option value="class">📚 Class</option>
+                                <option value="exam">📝 Exam</option>
+                                <option value="assignment">📋 Assignment</option>
+                                <option value="holiday">🏖️ Holiday</option>
+                                <option value="meeting">👥 Meeting</option>
+                                <option value="announcement">📢 Announcement</option>
+                                <option value="other">📌 Other</option>
+                            </select>
+                        </div>
                     </div>
-                </div>
-                <div id="imagePreview" style="margin-top: 0.5rem;"></div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">📄 Description</label>
+                        <textarea name="description" class="form-textarea" placeholder="Describe the event details..."></textarea>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">📅 Start Date *</label>
+                            <input type="date" name="start_date" class="form-input" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">📅 End Date</label>
+                            <input type="date" name="end_date" class="form-input">
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">🕐 Start Time</label>
+                            <input type="time" name="start_time" class="form-input">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">🕐 End Time</label>
+                            <input type="time" name="end_time" class="form-input">
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">📍 Location</label>
+                            <input type="text" name="location" class="form-input" placeholder="Event location">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">🎨 Color</label>
+                            <input type="color" name="color" class="form-input color-input" value="#10b981">
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">🏫 Class (Optional)</label>
+                            <select name="class_id" class="form-select">
+                                <option value="">All Classes</option>
+                                <?php 
+                                $unique_classes = [];
+                                foreach ($teacher_courses as $course): 
+                                    $class_key = $course['class_id'];
+                                    if (!isset($unique_classes[$class_key])):
+                                        $unique_classes[$class_key] = true;
+                                ?>
+                                <option value="<?= $course['class_id'] ?>">
+                                    <?= htmlspecialchars($course['class_name'] . ' ' . $course['section']) ?>
+                                </option>
+                                <?php 
+                                    endif;
+                                endforeach; 
+                                ?>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">📚 Subject (Optional)</label>
+                            <select name="subject_id" class="form-select">
+                                <option value="">All Subjects</option>
+                                <?php 
+                                $unique_subjects = [];
+                                foreach ($teacher_courses as $course): 
+                                    if (!$course['subject_id']) continue;
+                                    $subject_key = $course['subject_id'];
+                                    if (!isset($unique_subjects[$subject_key])):
+                                        $unique_subjects[$subject_key] = true;
+                                ?>
+                                <option value="<?= $course['subject_id'] ?>">
+                                    <?= htmlspecialchars($course['subject_name']) ?>
+                                </option>
+                                <?php 
+                                    endif;
+                                endforeach; 
+                                ?>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">🖼️ Event Image</label>
+                        <div class="file-upload" id="uploadArea">
+                            <input type="file" name="event_image" id="imageInput" style="display: none;" accept="image/*">
+                            <div class="file-upload-icon">📷</div>
+                            <div class="file-upload-text">Click to select image or drag and drop</div>
+                            <div class="file-upload-hint">Supported: JPG, PNG, GIF, WebP (Max: 5MB)</div>
+                        </div>
+                        <div id="imagePreview" class="image-preview"></div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">⏰ Reminder (minutes before)</label>
+                        <select name="reminder_minutes" class="form-select">
+                            <option value="">No Reminder</option>
+                            <option value="15">15 minutes</option>
+                            <option value="30">30 minutes</option>
+                            <option value="60">1 hour</option>
+                            <option value="1440">1 day</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-checkboxes">
+                        <div class="form-checkbox">
+                            <input type="checkbox" name="is_all_day" id="isAllDay">
+                            <label for="isAllDay">🌅 All day event</label>
+                        </div>
+                        
+                        <div class="form-checkbox">
+                            <input type="checkbox" name="is_public" id="isPublic" checked>
+                            <label for="isPublic">🌐 Make this event public to all students</label>
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary full-width">
+                        ✅ Create Event
+                    </button>
+                </form>
             </div>
-            
-            <div class="form-row">
-                <div class="form-group">
-                    <label class="form-label">Reminder (minutes before)</label>
-                    <select name="reminder_minutes" class="form-select">
-                        <option value="">No Reminder</option>
-                        <option value="15">15 minutes</option>
-                        <option value="30">30 minutes</option>
-                        <option value="60">1 hour</option>
-                        <option value="1440">1 day</option>
-                    </select>
-                </div>
-            </div>
-            
-            <div class="form-checkbox">
-                <input type="checkbox" name="is_all_day" id="isAllDay">
-                <label for="isAllDay">All day event</label>
-            </div>
-            
-            <div class="form-checkbox">
-                <input type="checkbox" name="is_public" id="isPublic" checked>
-                <label for="isPublic">Make this event public to all students</label>
-            </div>
-            
-            <div style="margin-top: 1.5rem;">
-                <button type="submit" class="btn btn-primary">Create Event</button>
-            </div>
-        </form>
-    </div>
+        </div>
 
-    <!-- Events List -->
-    <?php if (empty($events)): ?>
-    <div class="empty-state">
-        <div class="empty-title">No Events Found</div>
-        <div class="empty-text">Create your first event to get started.</div>
-    </div>
-    <?php else: ?>
-    <div class="events-grid">
-        <?php foreach ($events as $event): ?>
-        <div class="event-card" style="border-left-color: <?= htmlspecialchars($event['color']) ?>;">
-            <div class="event-header">
-                <?php if ($event['event_image']): ?>
-                    <img src="../<?= htmlspecialchars($event['event_image']) ?>" alt="Event Image" class="event-image">
+        <!-- Events List -->
+        <div class="card">
+            <div class="card-header">
+                <div class="card-header-icon">📅</div>
+                <h2 class="card-title">My Events</h2>
+                <span class="events-count"><?= count($events) ?></span>
+            </div>
+
+            <div class="card-content">
+                <?php if (empty($events)): ?>
+                <div class="empty-state">
+                    <div class="empty-icon">📅</div>
+                    <div class="empty-title">No Events Yet</div>
+                    <div class="empty-text">Create your first event to get started with event management.</div>
+                    <button class="btn btn-primary" onclick="toggleCreateForm()">
+                        ➕ Create Event
+                    </button>
+                </div>
                 <?php else: ?>
-                    <div class="event-icon">
-                        <?= getEventTypeIcon($event['event_type']) ?>
+                <div class="events-list">
+                    <?php foreach ($events as $event): ?>
+                    <div class="event-card" style="border-left-color: <?= htmlspecialchars($event['color']) ?>;">
+                        <div class="event-header">
+                            <?php if ($event['event_image']): ?>
+                                <img src="../<?= htmlspecialchars($event['event_image']) ?>" alt="Event Image" class="event-image">
+                            <?php else: ?>
+                                <div class="event-icon">
+                                    <?= getEventTypeIcon($event['event_type']) ?>
+                                </div>
+                            <?php endif; ?>
+                            
+                            <div class="event-content">
+                                <h3 class="event-title"><?= htmlspecialchars($event['title']) ?></h3>
+                                
+                                <?php if ($event['description']): ?>
+                                <p class="event-description"><?= htmlspecialchars($event['description']) ?></p>
+                                <?php endif; ?>
+                                
+                                <div class="event-meta">
+                                    <span class="meta-item">📅 <?= formatEventDate($event['start_date']) ?></span>
+                                    
+                                    <?php if ($event['start_time']): ?>
+                                    <span class="meta-item">🕐 <?= formatEventTime($event['start_time']) ?></span>
+                                    <?php endif; ?>
+                                    
+                                    <?php if ($event['location']): ?>
+                                    <span class="meta-item">📍 <?= htmlspecialchars($event['location']) ?></span>
+                                    <?php endif; ?>
+                                    
+                                    <?php if ($event['class_name']): ?>
+                                    <span class="meta-item">📚 <?= htmlspecialchars($event['class_name'] . ' ' . $event['section']) ?></span>
+                                    <?php endif; ?>
+                                    
+                                    <span class="meta-item event-type">🏷️ <?= ucfirst($event['event_type']) ?></span>
+                                </div>
+                                
+                                <div class="event-actions">
+                                    <button type="button" class="btn btn-secondary btn-sm" onclick="editEvent(<?= $event['id'] ?>)">
+                                        ✏️ Edit
+                                    </button>
+                                    <button type="button" class="btn btn-danger btn-sm" onclick="deleteEvent(<?= $event['id'] ?>, '<?= addslashes($event['title']) ?>')">
+                                        🗑️ Delete
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                <?php endif; ?>
-                
-                <div class="event-content">
-                    <h4 class="event-title"><?= htmlspecialchars($event['title']) ?></h4>
-                    
-                    <?php if ($event['description']): ?>
-                    <p class="event-description"><?= htmlspecialchars($event['description']) ?></p>
-                    <?php endif; ?>
-                    
-                    <div class="event-meta">
-                        <span>📅 <?= formatEventDate($event['start_date']) ?></span>
-                        
-                        <?php if ($event['start_time']): ?>
-                        <span>🕐 <?= formatEventTime($event['start_time']) ?></span>
-                        <?php endif; ?>
-                        
-                        <?php if ($event['location']): ?>
-                        <span>📍 <?= htmlspecialchars($event['location']) ?></span>
-                        <?php endif; ?>
-                        
-                        <?php if ($event['class_name']): ?>
-                        <span>📚 <?= htmlspecialchars($event['class_name'] . ' ' . $event['section']) ?></span>
-                        <?php endif; ?>
-                        
-                        <span>🏷️ <?= ucfirst($event['event_type']) ?></span>
-                    </div>
-                    
-                    <div class="event-actions">
-                        <button type="button" class="btn btn-danger btn-sm" onclick="deleteEvent(<?= $event['id'] ?>, '<?= addslashes($event['title']) ?>')">
-                            Delete
-                        </button>
-                    </div>
+                    <?php endforeach; ?>
                 </div>
+                <?php endif; ?>
             </div>
         </div>
-        <?php endforeach; ?>
     </div>
-    <?php endif; ?>
-</div>
 
-<!-- Delete Confirmation Modal -->
-<div id="deleteModal" class="modal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h3 class="modal-title">Confirm Delete</h3>
-            <button type="button" class="modal-close" onclick="hideDeleteModal()">&times;</button>
-        </div>
-        <div class="modal-body">
-            <p>Are you sure you want to delete this event?</p>
-            <p><strong>Title:</strong> <span id="deleteEventTitle"></span></p>
-            <p style="color: var(--color-danger); font-size: 0.875rem;">This action cannot be undone.</p>
-            
-            <form method="post" id="deleteForm">
-                <input type="hidden" name="action" value="delete_event">
-                <input type="hidden" name="event_id" id="deleteEventId">
+    <!-- Delete Confirmation Modal -->
+    <div id="deleteModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">🗑️ Confirm Delete</h3>
+                <button type="button" class="modal-close" onclick="hideDeleteModal()">✕</button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete this event?</p>
+                <p><strong>Title:</strong> <span id="deleteEventTitle"></span></p>
+                <p class="warning-text">⚠️ This action cannot be undone.</p>
                 
-                <div style="display: flex; gap: 0.5rem; justify-content: flex-end; margin-top: 1.5rem;">
-                    <button type="button" class="btn btn-secondary" onclick="hideDeleteModal()">Cancel</button>
-                    <button type="submit" class="btn btn-danger">Delete</button>
-                </div>
-            </form>
+                <form method="post" id="deleteForm">
+                    <input type="hidden" name="action" value="delete_event">
+                    <input type="hidden" name="event_id" id="deleteEventId">
+                    
+                    <div class="modal-actions">
+                        <button type="button" class="btn btn-secondary" onclick="hideDeleteModal()">Cancel</button>
+                        <button type="submit" class="btn btn-danger">🗑️ Delete</button>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
-</div>
 
-<!-- Include Bottom Navigation -->
-<?php include '../include/bootoomnav.php'; ?>
+    <!-- Include Bottom Navigation -->
+    <?php include '../include/bootoomnav.php'; ?>
 
-<script>
-// Image upload handling
-document.addEventListener('DOMContentLoaded', function() {
-    const uploadArea = document.getElementById('uploadArea');
-    const imageInput = document.getElementById('imageInput');
-    const imagePreview = document.getElementById('imagePreview');
-    
-    uploadArea.addEventListener('click', () => imageInput.click());
-    
-    uploadArea.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        uploadArea.classList.add('dragover');
-    });
-    
-    uploadArea.addEventListener('dragleave', () => {
-        uploadArea.classList.remove('dragover');
-    });
-    
-    uploadArea.addEventListener('drop', (e) => {
-        e.preventDefault();
-        uploadArea.classList.remove('dragover');
-        
-        const files = e.dataTransfer.files;
-        if (files.length > 0) {
-            imageInput.files = files;
-            previewImage(files[0]);
+    <script>
+        function toggleCreateForm() {
+            const form = document.getElementById('createForm');
+            const chevron = form.querySelector('.form-chevron');
+            form.classList.toggle('collapsed');
+            
+            if (form.classList.contains('collapsed')) {
+                chevron.textContent = '▼';
+            } else {
+                chevron.textContent = '▲';
+            }
         }
-    });
-    
-    imageInput.addEventListener('change', (e) => {
-        if (e.target.files.length > 0) {
-            previewImage(e.target.files[0]);
+
+        function showCalendarView() {
+            switchView('calendar');
         }
-    });
-    
-    function previewImage(file) {
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            imagePreview.innerHTML = `
-                <img src="${e.target.result}" style="max-width: 200px; max-height: 150px; border-radius: 0.5rem; object-fit: cover;">
-                <div style="font-size: 0.875rem; color: var(--color-gray-700); margin-top: 0.5rem;">
-                    Selected: ${file.name} (${formatFileSize(file.size)})
-                </div>
-            `;
-        };
-        reader.readAsDataURL(file);
-    }
-    
-    function formatFileSize(bytes) {
-        if (bytes === 0) return '0 Bytes';
-        const k = 1024;
-        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-        const i = Math.floor(Math.log(bytes) / Math.log(k));
-        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-    }
-});
 
-function deleteEvent(eventId, eventTitle) {
-    document.getElementById('deleteEventId').value = eventId;
-    document.getElementById('deleteEventTitle').textContent = eventTitle;
-    document.getElementById('deleteModal').classList.add('show');
-}
+        function editEvent(eventId) {
+            // Placeholder for edit functionality
+            alert('✏️ Edit functionality coming soon!');
+        }
 
-function hideDeleteModal() {
-    document.getElementById('deleteModal').classList.remove('show');
-}
+        function deleteEvent(eventId, eventTitle) {
+            document.getElementById('deleteEventId').value = eventId;
+            document.getElementById('deleteEventTitle').textContent = eventTitle;
+            document.getElementById('deleteModal').classList.add('show');
+        }
 
-// Close modal when clicking outside
-document.getElementById('deleteModal').addEventListener('click', function(e) {
-    if (e.target === this) {
-        hideDeleteModal();
-    }
-});
-</script>
+        function hideDeleteModal() {
+            document.getElementById('deleteModal').classList.remove('show');
+        }
+
+        // Image upload handling
+        document.addEventListener('DOMContentLoaded', function() {
+            const uploadArea = document.getElementById('uploadArea');
+            const imageInput = document.getElementById('imageInput');
+            const imagePreview = document.getElementById('imagePreview');
+            
+            uploadArea.addEventListener('click', () => imageInput.click());
+            
+            uploadArea.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                uploadArea.classList.add('dragover');
+            });
+            
+            uploadArea.addEventListener('dragleave', () => {
+                uploadArea.classList.remove('dragover');
+            });
+            
+            uploadArea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                uploadArea.classList.remove('dragover');
+                
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    imageInput.files = files;
+                    previewImage(files[0]);
+                }
+            });
+            
+            imageInput.addEventListener('change', (e) => {
+                if (e.target.files.length > 0) {
+                    previewImage(e.target.files[0]);
+                }
+            });
+            
+            function previewImage(file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    imagePreview.innerHTML = `
+                        <img src="${e.target.result}" class="preview-image">
+                        <div class="preview-info">
+                            Selected: ${file.name} (${formatFileSize(file.size)})
+                        </div>
+                    `;
+                };
+                reader.readAsDataURL(file);
+            }
+            
+            function formatFileSize(bytes) {
+                if (bytes === 0) return '0 Bytes';
+                const k = 1024;
+                const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+                const i = Math.floor(Math.log(bytes) / Math.log(k));
+                return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+            }
+        });
+
+        // Close modal when clicking outside
+        document.getElementById('deleteModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                hideDeleteModal();
+            }
+        });
+
+        // Auto-hide alerts
+        setTimeout(() => {
+            const alerts = document.querySelectorAll('.alert');
+            alerts.forEach(alert => {
+                alert.style.transition = 'opacity 0.5s ease';
+                alert.style.opacity = '0';
+                setTimeout(() => alert.remove(), 500);
+            });
+        }, 5000);
+
+        // Calendar functionality
+        let currentDate = new Date();
+        let currentView = 'month'; // 'month' or 'week'
+        let events = <?= json_encode($events) ?>;
+
+        function switchView(view) {
+            const listView = document.querySelector('.card:last-child');
+            const calendarContainer = document.getElementById('calendarContainer');
+            const calendarControls = document.getElementById('calendarControls');
+            const listViewBtn = document.getElementById('listViewBtn');
+            const calendarViewBtn = document.getElementById('calendarViewBtn');
+            
+            if (view === 'calendar') {
+                listView.style.display = 'none';
+                calendarContainer.style.display = 'block';
+                calendarControls.style.display = 'block';
+                listViewBtn.classList.remove('active');
+                calendarViewBtn.classList.add('active');
+                renderCalendar();
+            } else {
+                listView.style.display = 'block';
+                calendarContainer.style.display = 'none';
+                calendarControls.style.display = 'none';
+                listViewBtn.classList.add('active');
+                calendarViewBtn.classList.remove('active');
+            }
+        }
+
+        function switchPeriod(period) {
+            currentView = period;
+            document.getElementById('monthBtn').classList.toggle('active', period === 'month');
+            document.getElementById('weekBtn').classList.toggle('active', period === 'week');
+            renderCalendar();
+        }
+
+        function previousPeriod() {
+            if (currentView === 'month') {
+                currentDate.setMonth(currentDate.getMonth() - 1);
+            } else {
+                currentDate.setDate(currentDate.getDate() - 7);
+            }
+            renderCalendar();
+        }
+
+        function nextPeriod() {
+            if (currentView === 'month') {
+                currentDate.setMonth(currentDate.getMonth() + 1);
+            } else {
+                currentDate.setDate(currentDate.getDate() + 7);
+            }
+            renderCalendar();
+        }
+
+        function goToToday() {
+            currentDate = new Date();
+            renderCalendar();
+        }
+
+        function renderCalendar() {
+            const calendarGrid = document.getElementById('calendarGrid');
+            const currentPeriod = document.getElementById('currentPeriod');
+            
+            if (currentView === 'month') {
+                renderMonthView(calendarGrid, currentPeriod);
+            } else {
+                renderWeekView(calendarGrid, currentPeriod);
+            }
+        }
+
+        function renderMonthView(container, periodElement) {
+            const year = currentDate.getFullYear();
+            const month = currentDate.getMonth();
+            const firstDay = new Date(year, month, 1);
+            const lastDay = new Date(year, month + 1, 0);
+            const startDate = new Date(firstDay);
+            startDate.setDate(startDate.getDate() - firstDay.getDay());
+            
+            periodElement.textContent = firstDay.toLocaleDateString('en-US', { 
+                month: 'long', 
+                year: 'numeric' 
+            });
+            
+            let html = '<div class="calendar-header">';
+            const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+            dayNames.forEach(day => {
+                html += `<div class="day-header">${day}</div>`;
+            });
+            html += '</div><div class="calendar-body">';
+            
+            const currentDateObj = new Date();
+            const today = currentDateObj.toDateString();
+            
+            for (let i = 0; i < 42; i++) {
+                const date = new Date(startDate);
+                date.setDate(startDate.getDate() + i);
+                
+                const isCurrentMonth = date.getMonth() === month;
+                const isToday = date.toDateString() === today;
+                const dayEvents = getEventsForDate(date);
+                
+                html += `
+                    <div class="calendar-day ${isCurrentMonth ? 'current-month' : 'other-month'} ${isToday ? 'today' : ''}" 
+                         onclick="showDayEvents('${date.toISOString().split('T')[0]}')">
+                        <div class="day-number">${date.getDate()}</div>
+                        <div class="day-events">
+                            ${dayEvents.slice(0, 3).map(event => `
+                                <div class="event-dot" style="background-color: ${event.color}" 
+                                     title="${event.title}"></div>
+                            `).join('')}
+                            ${dayEvents.length > 3 ? `<div class="more-events">+${dayEvents.length - 3}</div>` : ''}
+                        </div>
+                    </div>
+                `;
+            }
+            
+            html += '</div>';
+            container.innerHTML = html;
+        }
+
+        function renderWeekView(container, periodElement) {
+            const startOfWeek = new Date(currentDate);
+            startOfWeek.setDate(currentDate.getDate() - currentDate.getDay());
+            
+            const endOfWeek = new Date(startOfWeek);
+            endOfWeek.setDate(startOfWeek.getDate() + 6);
+            
+            periodElement.textContent = `${startOfWeek.toLocaleDateString('en-US', { 
+                month: 'short', 
+                day: 'numeric' 
+            })} - ${endOfWeek.toLocaleDateString('en-US', { 
+                month: 'short', 
+                day: 'numeric', 
+                year: 'numeric' 
+            })}`;
+            
+            let html = '<div class="week-header">';
+            const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+            
+            for (let i = 0; i < 7; i++) {
+                const date = new Date(startOfWeek);
+                date.setDate(startOfWeek.getDate() + i);
+                const isToday = date.toDateString() === new Date().toDateString();
+                
+                html += `
+                    <div class="week-day-header ${isToday ? 'today' : ''}">
+                        <div class="day-name">${dayNames[i]}</div>
+                        <div class="day-date">${date.getDate()}</div>
+                    </div>
+                `;
+            }
+            html += '</div>';
+            
+            html += '<div class="week-body">';
+            for (let hour = 0; hour < 24; hour++) {
+                html += `<div class="hour-row">`;
+                html += `<div class="hour-label">${formatHour(hour)}</div>`;
+                
+                for (let day = 0; day < 7; day++) {
+                    const date = new Date(startOfWeek);
+                    date.setDate(startOfWeek.getDate() + day);
+                    const hourEvents = getEventsForDateHour(date, hour);
+                    
+                    html += `
+                        <div class="hour-cell" onclick="createEventAtTime('${date.toISOString().split('T')[0]}', ${hour})">
+                            ${hourEvents.map(event => `
+                                <div class="week-event" style="background-color: ${event.color}20; border-left-color: ${event.color}"
+                                     onclick="event.stopPropagation(); showEventDetails(${event.id})">
+                                    <div class="event-title">${event.title}</div>
+                                    <div class="event-time">${event.start_time || 'All day'}</div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    `;
+                }
+                html += '</div>';
+            }
+            html += '</div>';
+            
+            container.innerHTML = html;
+        }
+
+        function getEventsForDate(date) {
+            const dateStr = date.toISOString().split('T')[0];
+            return events.filter(event => {
+                const eventStart = event.start_date;
+                const eventEnd = event.end_date || event.start_date;
+                return dateStr >= eventStart && dateStr <= eventEnd;
+            });
+        }
+
+        function getEventsForDateHour(date, hour) {
+            const dateStr = date.toISOString().split('T')[0];
+            return events.filter(event => {
+                if (event.start_date !== dateStr) return false;
+                if (!event.start_time) return hour === 0; // All-day events show at midnight
+                
+                const eventHour = parseInt(event.start_time.split(':')[0]);
+                return eventHour === hour;
+            });
+        }
+
+        function formatHour(hour) {
+            if (hour === 0) return '12 AM';
+            if (hour < 12) return `${hour} AM`;
+            if (hour === 12) return '12 PM';
+            return `${hour - 12} PM`;
+        }
+
+        function showDayEvents(dateStr) {
+            const date = new Date(dateStr + 'T00:00:00');
+            const dayEvents = getEventsForDate(date);
+            
+            if (dayEvents.length === 0) {
+                alert(`📅 No events on ${date.toLocaleDateString('en-US', { 
+                    weekday: 'long', 
+                    year: 'numeric', 
+                    month: 'long', 
+                    day: 'numeric' 
+                })}`);
+                return;
+            }
+            
+            let eventsList = dayEvents.map(event => `
+                • ${event.title} ${event.start_time ? `at ${event.start_time}` : '(All day)'}
+            `).join('\n');
+            
+            alert(`📅 Events on ${date.toLocaleDateString('en-US', { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+            })}:\n\n${eventsList}`);
+        }
+
+        function createEventAtTime(dateStr, hour) {
+            // Pre-fill the create form with the selected date and time
+            const createForm = document.getElementById('createForm');
+            const startDateInput = document.querySelector('input[name="start_date"]');
+            const startTimeInput = document.querySelector('input[name="start_time"]');
+            
+            startDateInput.value = dateStr;
+            startTimeInput.value = `${hour.toString().padStart(2, '0')}:00`;
+            
+            // Show the create form
+            if (createForm.classList.contains('collapsed')) {
+                toggleCreateForm();
+            }
+            
+            // Switch back to list view
+            switchView('list');
+            
+            // Scroll to form
+            createForm.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function showEventDetails(eventId) {
+            const event = events.find(e => e.id == eventId);
+            if (!event) return;
+            
+            alert(`📅 ${event.title}\n\n📄 ${event.description || 'No description'}\n📅 ${event.start_date}${event.start_time ? ` at ${event.start_time}` : ''}\n📍 ${event.location || 'No location specified'}`);
+        }
+    </script>
 </body>
 </html>

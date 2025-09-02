@@ -38,7 +38,7 @@ function isNavActive($page) {
 }
 ?>
 
-<div class="bottom-nav">
+<div class="bottom-nav ">
     <div class="nav-container">
         <?php foreach ($nav_items as $item): ?>
             <a href="<?= $item['page'] ?>.php" class="nav-item <?= isNavActive($item['page']) ? 'active' : '' ?>">
